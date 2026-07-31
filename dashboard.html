@@ -457,6 +457,8 @@ let estimateFilterMinutes = null; // null = "All" — Next Up time-fits filter, 
 const NEXT_UP_CAP = 8;
 let goalsExpanded = false; // false = capped at GOALS_CAP; true = showing all goals
 const GOALS_CAP = 5; // tuned so the right column's bottom (Key Metrics) roughly lines up with Next Up's bottom in the left column
+let lookaheadExpanded = false; // false = capped at LOOKAHEAD_CAP; true = showing every event within LOOKAHEAD_MAX_DAYS
+const LOOKAHEAD_CAP = 10;
 const projectCardOverride = new Map(); // project id -> explicit user toggle (true/false), overrides the tier-based default open/collapsed state
 const justCompleted = new Set(); // task ids checked off this session — kept visible, sorted last, until next full reload
 
@@ -878,13 +880,26 @@ function eventRowHtml(t){
 
 function renderCalendarLookahead(){
   const events = calendarLookahead();
+  const shown = lookaheadExpanded ? events : events.slice(0, LOOKAHEAD_CAP);
+  const hiddenCount = events.length - shown.length;
+
   const countEl = document.getElementById('calendar-lookahead-count');
-  if (countEl) countEl.textContent = events.length || '';
+  if (countEl) countEl.textContent = events.length
+    ? (hiddenCount > 0 ? `${shown.length} of ${events.length}` : `${events.length}`)
+    : '';
+
   const el = document.getElementById('calendar-lookahead');
   if (!el) return;
   el.innerHTML = events.length
-    ? events.map(eventRowHtml).join('')
+    ? shown.map(eventRowHtml).join('')
+      + (hiddenCount > 0 ? `<button class="add-row-btn" onclick="toggleLookaheadExpanded()">Show ${hiddenCount} more</button>` : "")
+      + (lookaheadExpanded && events.length > LOOKAHEAD_CAP ? `<button class="add-row-btn" onclick="toggleLookaheadExpanded()">Show fewer</button>` : "")
     : `<div class="empty-row">Nothing on the calendar yet.</div>`;
+}
+
+function toggleLookaheadExpanded(){
+  lookaheadExpanded = !lookaheadExpanded;
+  renderCalendarLookahead();
 }
 
 // ---------------------------------------------------------------------
