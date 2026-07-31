@@ -390,7 +390,7 @@
   }
   .modal-overlay.hidden{display:none;}
   .modal-box{
-    width:100%;max-width:560px;max-height:min(720px, 85vh);overflow-y:auto;
+    width:100%;max-width:720px;max-height:min(720px, 85vh);overflow-y:auto;
     padding:18px 20px 20px;
   }
   .modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px;}
@@ -1887,6 +1887,12 @@ function renderTaskEditForm(t, siblingTasks){
         <input type="time" id="ef-duetime-${t.id}" value="${t.due_time ? t.due_time.slice(0,5) : ''}" onclick="this.showPicker && this.showPicker()" />
       </div>
       <div class="field">
+        <label>Project</label>
+        <select id="ef-project-${t.id}">
+          ${projects.slice().sort((a,b) => a.name.localeCompare(b.name)).map(p => `<option value="${p.id}" ${p.id===t.project_id?'selected':''}>${escapeHtml(p.name)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field">
         <label>Priority</label>
         <select id="ef-priority-${t.id}">
           ${[1,2,3,4,5].map(n => `<option value="${n}" ${n===t.priority?'selected':''}>${n}</option>`).join('')}
@@ -1944,6 +1950,7 @@ function cancelEditTask(){
 async function saveTaskEdit(id){
   const description = document.getElementById(`ef-desc-${id}`).value.trim();
   if (!description) { alert('Description cannot be empty'); return; }
+  const project_id = document.getElementById(`ef-project-${id}`).value;
   const detail = document.getElementById(`ef-detail-${id}`).value.trim() || null;
   const due_date = document.getElementById(`ef-due-${id}`).value || null;
   const due_time = document.getElementById(`ef-duetime-${id}`).value || null;
@@ -1956,7 +1963,7 @@ async function saveTaskEdit(id){
   const is_event = document.getElementById(`ef-isevent-${id}`).checked;
   if (is_event && !due_date) { alert('A calendar event needs a due date'); return; }
   try{
-    const { error } = await client.from('tasks').update({ description, detail, due_date, due_time, priority, status, not_before, estimate_minutes, blocked_by, is_event }).eq('id', id);
+    const { error } = await client.from('tasks').update({ project_id, description, detail, due_date, due_time, priority, status, not_before, estimate_minutes, blocked_by, is_event }).eq('id', id);
     if (error) throw error;
     editingTaskId = null;
     await loadData();
