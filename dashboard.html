@@ -899,17 +899,19 @@ function eventRowHtml(t){
 }
 
 function renderCalendarLookahead(){
-  // Collapsed: bounded to LOOKAHEAD_MAX_DAYS, capped at LOOKAHEAD_CAP rows.
-  // Expanded ("Show more" clicked): drops the day-window cap entirely too —
-  // not just showing more of the same 30-day slice — since the whole point
-  // of expanding is to see everything, not a slightly bigger fixed window.
-  const events = calendarLookahead(lookaheadExpanded);
-  const shown = lookaheadExpanded ? events : events.slice(0, LOOKAHEAD_CAP);
-  const hiddenCount = events.length - shown.length;
+  // allEvents is always the true unbounded total (every future event, no day
+  // cap) so the count/"Show N more" label is honest about what expanding
+  // will actually reveal — not just what's within the 30-day window. When
+  // collapsed, what's actually rendered is still bounded to LOOKAHEAD_MAX_DAYS
+  // and capped at LOOKAHEAD_CAP rows; expanding shows the full unbounded list.
+  const allEvents = calendarLookahead(true);
+  const windowEvents = lookaheadExpanded ? allEvents : calendarLookahead(false);
+  const shown = lookaheadExpanded ? allEvents : windowEvents.slice(0, LOOKAHEAD_CAP);
+  const hiddenCount = allEvents.length - shown.length;
 
   const countEl = document.getElementById('calendar-lookahead-count');
-  if (countEl) countEl.textContent = events.length
-    ? (hiddenCount > 0 ? `${shown.length} of ${events.length}` : `${events.length}`)
+  if (countEl) countEl.textContent = allEvents.length
+    ? (hiddenCount > 0 ? `${shown.length} of ${allEvents.length}` : `${allEvents.length}`)
     : '';
   const collapseTopEl = document.getElementById('calendar-lookahead-collapse-top');
   if (collapseTopEl) collapseTopEl.innerHTML = lookaheadExpanded
@@ -917,10 +919,10 @@ function renderCalendarLookahead(){
 
   const el = document.getElementById('calendar-lookahead');
   if (!el) return;
-  el.innerHTML = events.length
+  el.innerHTML = allEvents.length
     ? shown.map(eventRowHtml).join('')
       + (hiddenCount > 0 ? `<button class="add-row-btn" onclick="toggleLookaheadExpanded()">Show ${hiddenCount} more</button>` : "")
-      + (lookaheadExpanded && events.length > LOOKAHEAD_CAP ? `<button class="add-row-btn" onclick="toggleLookaheadExpanded()">Show fewer</button>` : "")
+      + (lookaheadExpanded && allEvents.length > LOOKAHEAD_CAP ? `<button class="add-row-btn" onclick="toggleLookaheadExpanded()">Show fewer</button>` : "")
     : `<div class="empty-row">Nothing on the calendar yet.</div>`;
 }
 
