@@ -129,9 +129,11 @@ The sync script isn't on any scheduler by default — run it manually, or wire u
 scheduled task. `end_date`/`max_occurrences` (both optional) cap a row to a finite series
 instead of running forever.
 
-`HABIT_GROUPS` in `dashboard.html` merges multiple weekly `recurring_tasks` rows into a single
-progress ring in the Habits section, matched by `description` (no schema-level grouping
-column). It ships empty — add a clause per group once you've created your own weekly habits.
+The Habits section (`renderHabits()` in `dashboard.html`) groups every independent weekly
+`recurring_tasks` row into one progress ring per `project_id` — e.g. several gym-day habits
+under one "Fitness" project automatically roll up into a single Fitness ring. No separate
+config needed: a new habit just needs the right `project_id` and it joins (or starts) that
+project's ring on its own.
 
 ## Code patterns worth knowing
 
@@ -157,5 +159,6 @@ column). It ships empty — add a clause per group once you've created your own 
 1. Insert a row into `recurring_tasks` with the right `frequency` fields and `chained` value
    (see above).
 2. Run `scripts/sync_recurring.py` to generate the first occurrences.
-3. If it's a habit you want a progress ring for, add a matching clause to `HABIT_GROUPS` in
-   `dashboard.html`.
+3. If it's a habit you want a progress ring for, just make sure it has a `project_id` set — it
+   automatically joins that project's Habits ring (see above), grouped with any other
+   independent weekly habits already on that project.

@@ -431,13 +431,6 @@ const USER_NAME = "there";
 const CLAUDE_USAGE_RESET_DOW = 6; // Saturday, JS Date convention (0=Sun..6=Sat)
 const CLAUDE_USAGE_RESET_HOUR = 20; // 8:00pm
 
-// Groups multiple recurring_tasks rows into a single Habits ring (e.g. AM/PM doses,
-// or several weekly activities that together represent one "did I move today" habit).
-// Matching is by description since there's no schema-level grouping column.
-// Empty by default — add a clause per group once you've created your own
-// weekly recurring_tasks rows (see scripts/sync_recurring.py). Example:
-//   { label: 'Fitness', match: d => ['Gym','Run','Yoga'].includes(d) }
-const HABIT_GROUPS = [];
 
 const app = document.getElementById("app");
 const configured = SUPABASE_URL.startsWith("http") && SUPABASE_ANON_KEY.length > 20;
@@ -1538,28 +1531,31 @@ async function logClaudeUsage(){
 function renderHabits(){
   const el = document.getElementById("habits");
   if (!el) return;
+  // Independent weekly recurring tasks are grouped into one ring per project
+  // (e.g. several gym-day habits all rolling up into one Fitness ring) —
+  // grouping is purely by project_id, so a new habit just needs the right
+  // project assigned to it and automatically joins (or starts) that ring, no
+  // code change needed.
   const habits = recurringTasks.filter(rt => rt.active && rt.frequency === 'weekly' && !rt.chained);
-  const cards = [];
-  const grouped = new Set();
-  for (const group of HABIT_GROUPS){
-    const members = habits.filter(rt => group.match(rt.description));
-    if (!members.length) continue;
-    members.forEach(rt => grouped.add(rt.id));
+  const byProject = new Map();
+  for (const rt of habits){
+    if (!byProject.has(rt.project_id)) byProject.set(rt.project_id, []);
+    byProject.get(rt.project_id).push(rt);
+  }
+  const groups = [...byProject.entries()]
+    .map(([projectId, members]) => ({ members, project: projectFor(projectId) }))
+    .sort((a,b) => (a.project ? a.project.priority : 99) - (b.project ? b.project.priority : 99)
+      || (a.project ? a.project.name : '').localeCompare(b.project ? b.project.name : ''));
+
+  const cards = groups.map(({ members, project }) => {
     const totals = members.reduce((acc, rt) => {
       const { done, total } = habitProgress(rt);
       return { done: acc.done + done, total: acc.total + total };
     }, { done: 0, total: 0 });
-    const project = projectFor(members[0].project_id);
     const color = project ? project.color : 'var(--signal)';
-    cards.push(habitCardHtml(group.label, totals.done, totals.total, color));
-  }
-  for (const rt of habits){
-    if (grouped.has(rt.id)) continue;
-    const { done, total } = habitProgress(rt);
-    const project = projectFor(rt.project_id);
-    const color = project ? project.color : 'var(--signal)';
-    cards.push(habitCardHtml(rt.description, done, total, color));
-  }
+    const label = project ? project.name : members[0].description;
+    return habitCardHtml(label, totals.done, totals.total, color);
+  });
   cards.push(usageRingCardHtml());
 
   const logRowHtml = loggingClaudeUsage
