@@ -80,7 +80,13 @@
     text-transform:uppercase;padding:15px 18px 11px;display:flex;align-items:baseline;gap:8px;
   }
   .mod-label .idx{color:var(--signal);opacity:0.85;}
-  .mod-label .count{margin-left:auto;color:var(--ash);}
+  .mod-label .count{color:var(--ash);}
+  .mod-label-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+  .collapse-top-btn{
+    background:none;border:none;color:var(--ash);font-family:"IBM Plex Mono",ui-monospace,monospace;
+    font-size:10.5px;letter-spacing:0.05em;text-transform:none;cursor:pointer;padding:0;font-weight:normal;
+  }
+  .collapse-top-btn:hover{color:var(--signal);}
   .fit-pills{display:flex;gap:4px;}
   .fit-pill{
     font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:9.5px;letter-spacing:0.02em;
@@ -520,11 +526,11 @@ function render() {
       <div class="console-row">
         <div class="console-col">
           <div class="panel">
-            <div class="mod-label"><span class="idx">01</span> Today's Checklist — ${todayHeaderDate} <span class="count mono" id="checklist-count"></span></div>
+            <div class="mod-label"><span class="idx">01</span> Today's Checklist — ${todayHeaderDate} <span class="mod-label-right"><span id="checklist-collapse-top"></span><span class="count mono" id="checklist-count"></span></span></div>
             <div class="list" id="checklist"></div>
           </div>
           <div class="panel">
-            <div class="mod-label"><span class="idx">02</span> Next Up <span class="fit-pills" id="fit-pills"></span> <span class="count mono" id="nextup-count"></span></div>
+            <div class="mod-label"><span class="idx">02</span> Next Up <span class="fit-pills" id="fit-pills"></span> <span class="mod-label-right"><span id="nextup-collapse-top"></span><span class="count mono" id="nextup-count"></span></span></div>
             <div class="list" id="nextup"></div>
           </div>
         </div>
@@ -535,11 +541,11 @@ function render() {
             <div class="habit-row" id="habits"></div>
           </div>
           <div class="panel">
-            <div class="mod-label"><span class="idx">04</span> Calendar Look-ahead <span class="count mono" id="calendar-lookahead-count"></span></div>
+            <div class="mod-label"><span class="idx">04</span> Calendar Look-ahead <span class="mod-label-right"><span id="calendar-lookahead-collapse-top"></span><span class="count mono" id="calendar-lookahead-count"></span></span></div>
             <div class="list" id="calendar-lookahead"></div>
           </div>
           <div class="panel">
-            <div class="mod-label"><span class="idx">05</span> Goals <span class="count mono" id="goals-count"></span></div>
+            <div class="mod-label"><span class="idx">05</span> Goals <span class="mod-label-right"><span id="goals-collapse-top"></span><span class="count mono" id="goals-count"></span></span></div>
             <div class="list" id="goals"></div>
           </div>
         </div>
@@ -813,6 +819,8 @@ function renderStacks(){
   const doneNextupExtra = doneExtra.filter(t => !(t.overdue || t.dueToday)).slice(0, 15);
 
   document.getElementById("checklist-count").textContent = checklist.length || '';
+  document.getElementById("checklist-collapse-top").innerHTML = showCompletedChecklist
+    ? `<button class="collapse-top-btn" onclick="toggleShowCompleted('checklist')">Show less &uarr;</button>` : '';
   const checklistEl = document.getElementById("checklist");
   checklistEl.innerHTML = (checklist.length
     ? checklist.map(ticketRowHtml).join("")
@@ -824,6 +832,8 @@ function renderStacks(){
   document.getElementById("nextup-count").textContent = nextUpAll.length
     ? (nextUpHiddenCount > 0 ? `${nextUp.length} of ${nextUpAll.length}` : `${nextUpAll.length}`)
     : '';
+  document.getElementById("nextup-collapse-top").innerHTML = (nextUpExpanded || showCompletedNextup)
+    ? `<button class="collapse-top-btn" onclick="collapseNextUpTop()">Show less &uarr;</button>` : '';
   const nextUpEl = document.getElementById("nextup");
   nextUpEl.innerHTML = (nextUp.length
     ? nextUp.map(ticketRowHtml).join("")
@@ -842,6 +852,15 @@ function toggleNextUpExpanded(){
   renderStacks();
 }
 
+// Collapses both of Next Up's independent expansion states at once — used by
+// the top-of-panel "Show less" shortcut so it works regardless of which one
+// (or both) got the panel into an expanded state.
+function collapseNextUpTop(){
+  nextUpExpanded = false;
+  showCompletedNextup = false;
+  renderStacks();
+}
+
 function toggleShowCompleted(section){
   if (section === 'checklist') showCompletedChecklist = !showCompletedChecklist;
   else showCompletedNextup = !showCompletedNextup;
@@ -850,16 +869,17 @@ function toggleShowCompleted(section){
 
 const LOOKAHEAD_MAX_DAYS = 30;
 
-function calendarLookahead(){
-  // Events (is_event=true) due after today, not yet done, not gated. Shows
-  // every upcoming event up to LOOKAHEAD_MAX_DAYS out — a fixed window, not
-  // count-based. Since 30 > 7 this always covers at least "everything in the
-  // next 7 days" as a subset; it just never reaches past the 30-day cap even
-  // during a quiet stretch with few events.
+function calendarLookahead(unbounded){
+  // Events (is_event=true) due after today, not yet done, not gated. By
+  // default shows every upcoming event up to LOOKAHEAD_MAX_DAYS out — a
+  // fixed window, not count-based. Since 30 > 7 this always covers at least
+  // "everything in the next 7 days" as a subset. Pass unbounded=true (from
+  // the expanded/"Show more" state) to drop the day cap entirely and return
+  // every future event, however far out.
   const todayStr = localDateStr();
-  const windowEnd = addDaysToDateStr(todayStr, LOOKAHEAD_MAX_DAYS);
+  const windowEnd = unbounded ? null : addDaysToDateStr(todayStr, LOOKAHEAD_MAX_DAYS);
   return tasks
-    .filter(t => t.is_event && t.status !== 'done' && t.due_date && t.due_date > todayStr && t.due_date <= windowEnd && !gateFor(t))
+    .filter(t => t.is_event && t.status !== 'done' && t.due_date && t.due_date > todayStr && (unbounded || t.due_date <= windowEnd) && !gateFor(t))
     .map(t => shapeTask(t, todayStr))
     .sort((a,b) => a.due_date.localeCompare(b.due_date) || (a.due_time || '99:99').localeCompare(b.due_time || '99:99'));
 }
@@ -879,7 +899,11 @@ function eventRowHtml(t){
 }
 
 function renderCalendarLookahead(){
-  const events = calendarLookahead();
+  // Collapsed: bounded to LOOKAHEAD_MAX_DAYS, capped at LOOKAHEAD_CAP rows.
+  // Expanded ("Show more" clicked): drops the day-window cap entirely too —
+  // not just showing more of the same 30-day slice — since the whole point
+  // of expanding is to see everything, not a slightly bigger fixed window.
+  const events = calendarLookahead(lookaheadExpanded);
   const shown = lookaheadExpanded ? events : events.slice(0, LOOKAHEAD_CAP);
   const hiddenCount = events.length - shown.length;
 
@@ -887,6 +911,9 @@ function renderCalendarLookahead(){
   if (countEl) countEl.textContent = events.length
     ? (hiddenCount > 0 ? `${shown.length} of ${events.length}` : `${events.length}`)
     : '';
+  const collapseTopEl = document.getElementById('calendar-lookahead-collapse-top');
+  if (collapseTopEl) collapseTopEl.innerHTML = lookaheadExpanded
+    ? `<button class="collapse-top-btn" onclick="toggleLookaheadExpanded()">Show less &uarr;</button>` : '';
 
   const el = document.getElementById('calendar-lookahead');
   if (!el) return;
@@ -1278,6 +1305,8 @@ function renderGoals(){
   document.getElementById("goals-count").textContent = sorted.length
     ? (hiddenCount > 0 ? `${shown.length} of ${sorted.length}` : `${sorted.length}`)
     : '';
+  document.getElementById("goals-collapse-top").innerHTML = goalsExpanded
+    ? `<button class="collapse-top-btn" onclick="toggleGoalsExpanded()">Show less &uarr;</button>` : '';
 
   goalsEl.innerHTML = shown.map(g => editingGoalId === g.id ? goalEditFormHtml(g) : goalRowHtml(g)).join('')
     + (hiddenCount > 0 ? `<button class="add-row-btn" onclick="toggleGoalsExpanded()">Show ${hiddenCount} more</button>` : "")
