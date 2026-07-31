@@ -81,6 +81,15 @@ structural changes.
   status badge (the default/expected state); only `paused`/`done` show a pill and dim the card.
 - `parent_id` on projects (uuid, self-referential, optional): one level of nesting for
   sub-projects under a shared parent project. Not used by default.
+- `is_default` on projects (boolean): marks the one project new tasks fall back to when
+  nothing else fits. Toggle it via a checkbox in the project edit modal
+  (`renderProjectEditForm()`/`saveProjectEdit()` in `dashboard.html`) — checking it clears the
+  flag from every other project first, since only one project can hold it (also enforced by a
+  partial unique index in `schema.sql`). Two consumers: the freeform quick-add parser
+  (`functions/parse-task.js`) assigns the default project's id when the model can't confidently
+  pick one, and the blank "New task" modal pre-selects it instead of leaving the picker unset.
+  No project is marked default out of the box — set it on whichever project should be the
+  catch-all once you've created one.
 - `completed_at` (timestamptz, on both tables): auto-set/cleared by a Postgres trigger when
   `status` transitions to/from `'done'`. Never write to this column directly — just change
   `status`.

@@ -4,12 +4,16 @@
 // secret (env.ANTHROPIC_API_KEY) — never shipped to the browser, unlike the
 // Supabase anon key which is already public in dashboard.html by design.
 //
-// Request body:  { text: string, today: "YYYY-MM-DD", projects: [{id, name}] }
+// Request body:  { text: string, today: "YYYY-MM-DD", projects: [{id, name, is_default}] }
 // Response body: { parsed: { project_id, description, detail, due_date, due_time,
 //                             priority, not_before, estimate_minutes, is_event } }
-// All parsed fields except description/priority may be null. project_id is
-// null when the model isn't confident which project fits — the frontend
-// forces the user to pick one in that case rather than silently guessing.
+// All parsed fields except description/priority may be null. The model
+// returns project_id=null when it isn't confident which project fits; this
+// handler then defaults that to whichever project has is_default=true (set via
+// the checkbox in the project edit modal — see the projects.is_default column
+// note in schema.sql) rather than leaving it empty, since an unassigned task is
+// easy to lose track of. Falls back to true null only if no project is marked
+// default, in which case the frontend still forces the user to pick one.
 // description/detail follow the tight-description convention (see the `detail`
 // column note in schema.sql / CLAUDE.md) — description is a short verb-phrase,
 // detail carries rationale/numbers/links the note might have included.
@@ -142,7 +146,13 @@ export async function onRequestPost(context) {
     return jsonResponse({ error: "Model did not return a structured task" }, 502);
   }
 
-  return jsonResponse({ parsed: toolUse.input });
+  const parsed = toolUse.input;
+  if (!parsed.project_id) {
+    const defaultProject = projects.find((p) => p.is_default);
+    if (defaultProject) parsed.project_id = defaultProject.id;
+  }
+
+  return jsonResponse({ parsed });
 }
 
 function jsonResponse(obj, status = 200) {

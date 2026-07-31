@@ -504,7 +504,7 @@ function render() {
 
     <div class="quickadd-wrap panel">
       <div class="quickadd-row">
-        <input type="text" id="quick-add-input" placeholder="Add a task&hellip; e.g. &quot;work: pick up the Mendl's pastry order, by 3pm&quot;"
+        <input type="text" autocomplete="off" id="quick-add-input" placeholder="Add a task&hellip; e.g. &quot;work: pick up the Mendl's pastry order, by 3pm&quot;"
           onkeydown="if(event.key==='Enter'){event.preventDefault();submitQuickAdd();}" />
         <button class="btn" id="quick-add-btn" onclick="submitQuickAdd()">Add</button>
         <button class="btn-ghost search-trigger-btn" title="Search tasks, goals, projects" onclick="openSearch()">
@@ -604,7 +604,7 @@ function dateRefHelperHtml(dueInputId){
         <option value="">— none —</option>
         ${opts.map(o => `<option value="${escapeHtml(o.date)}">${escapeHtml(o.label)}</option>`).join('')}
       </select>
-      <input type="number" id="dateref-offset" value="7" min="0" style="width:56px;" />
+      <input type="number" autocomplete="off" id="dateref-offset" value="7" min="0" style="width:56px;" />
       <select id="dateref-dir" style="width:110px;">
         <option value="before">days before</option>
         <option value="after">days after</option>
@@ -1130,7 +1130,7 @@ function renderProjectTasksModal(pid){
       }).join('') || `<div style="color:var(--ash);font-size:12.5px;">No tasks yet.</div>`}
 
       <div class="add-row">
-        <input type="text" id="new-task-${p.id}" placeholder="New task..." />
+        <input type="text" autocomplete="off" id="new-task-${p.id}" placeholder="New task..." />
         <input type="date" id="new-task-date-${p.id}" onclick="this.showPicker && this.showPicker()" />
         <input type="time" id="new-task-time-${p.id}" onclick="this.showPicker && this.showPicker()" />
         <button class="btn" onclick="addTask('${p.id}')">Add</button>
@@ -1160,7 +1160,7 @@ function goalEditFormHtml(g){
     <div class="fields">
       <div class="field" style="flex:1 1 100%;">
         <label>Description</label>
-        <input type="text" id="ef-gdesc-${g.id}" value="${escapeHtml(g.description)}" />
+        <input type="text" autocomplete="off" id="ef-gdesc-${g.id}" value="${escapeHtml(g.description)}" />
       </div>
     </div>
     <div class="fields">
@@ -1175,15 +1175,15 @@ function goalEditFormHtml(g){
     <div class="fields">
       <div class="field">
         <label>Current</label>
-        <input type="number" id="ef-gcurrent-${g.id}" value="${g.current_value ?? ''}" placeholder="optional" style="width:80px;" />
+        <input type="number" autocomplete="off" id="ef-gcurrent-${g.id}" value="${g.current_value ?? ''}" placeholder="optional" style="width:80px;" />
       </div>
       <div class="field">
         <label>Target</label>
-        <input type="number" id="ef-gtarget-${g.id}" value="${g.target_value ?? ''}" placeholder="optional" style="width:80px;" />
+        <input type="number" autocomplete="off" id="ef-gtarget-${g.id}" value="${g.target_value ?? ''}" placeholder="optional" style="width:80px;" />
       </div>
       <div class="field">
         <label>Unit</label>
-        <input type="text" id="ef-gunit-${g.id}" value="${escapeHtml(g.unit || '')}" placeholder="e.g. followers" style="width:100px;" />
+        <input type="text" autocomplete="off" id="ef-gunit-${g.id}" value="${escapeHtml(g.unit || '')}" placeholder="e.g. followers" style="width:100px;" />
       </div>
     </div>
     <div class="fields">
@@ -1214,7 +1214,7 @@ function addGoalFormHtml(){
     <div class="fields">
       <div class="field" style="flex:1 1 100%;">
         <label>Description</label>
-        <input type="text" id="ng-desc" placeholder="e.g. Get better at golf" />
+        <input type="text" autocomplete="off" id="ng-desc" placeholder="e.g. Get better at golf" />
       </div>
     </div>
     <div class="fields">
@@ -1229,15 +1229,15 @@ function addGoalFormHtml(){
     <div class="fields">
       <div class="field">
         <label>Current</label>
-        <input type="number" id="ng-current" placeholder="optional" style="width:80px;" />
+        <input type="number" autocomplete="off" id="ng-current" placeholder="optional" style="width:80px;" />
       </div>
       <div class="field">
         <label>Target</label>
-        <input type="number" id="ng-target" placeholder="optional" style="width:80px;" />
+        <input type="number" autocomplete="off" id="ng-target" placeholder="optional" style="width:80px;" />
       </div>
       <div class="field">
         <label>Unit</label>
-        <input type="text" id="ng-unit" placeholder="e.g. followers" style="width:100px;" />
+        <input type="text" autocomplete="off" id="ng-unit" placeholder="e.g. followers" style="width:100px;" />
       </div>
     </div>
     <div class="fields">
@@ -1518,7 +1518,7 @@ function renderHabits(){
 
   const logRowHtml = loggingClaudeUsage
     ? `<div class="usage-chart-log" style="flex-basis:100%;">
-         <input type="number" step="any" id="cu-log-input" placeholder="new Claude usage %" style="width:140px;" />
+         <input type="number" autocomplete="off" step="any" id="cu-log-input" placeholder="new Claude usage %" style="width:140px;" />
          <button class="icon-btn" title="Save" onclick="logClaudeUsage()">&#10003;</button>
          <button class="icon-btn" title="Cancel" onclick="cancelLogClaudeUsage()">&#10005;</button>
        </div>`
@@ -1591,7 +1591,7 @@ function listItemRowHtml(item){
   if (item.id === editingListItemId){
     return `
     <div class="row">
-      <input type="text" class="list-item-edit-input" value="${escapeAttr(item.title)}"
+      <input type="text" autocomplete="off" class="list-item-edit-input" value="${escapeAttr(item.title)}"
         onkeydown="if(event.key==='Enter'){saveListItemEdit('${item.id}', this)} if(event.key==='Escape'){cancelEditListItem()}" />
       <button class="icon-btn" title="Save" onclick="saveListItemEdit('${item.id}', this.previousElementSibling)">&#10003;</button>
       <button class="icon-btn" title="Cancel" onclick="cancelEditListItem()">&#10005;</button>
@@ -1635,7 +1635,7 @@ function renderLists(){
         <div class="list" data-list-name="${escapeAttr(name)}">
           ${items.map(listItemRowHtml).join('')}
           <div class="add-row list-item-add-row">
-            <input type="text" placeholder="Add item..." onkeydown="if(event.key==='Enter'){addListItemFromRow(this)}" />
+            <input type="text" autocomplete="off" placeholder="Add item..." onkeydown="if(event.key==='Enter'){addListItemFromRow(this)}" />
             <button class="btn" onclick="addListItemFromRow(this)">Add</button>
           </div>
         </div>
@@ -1690,8 +1690,8 @@ function addListCardHtml(){
   <div class="panel list-panel expanded-panel list-add-card">
     <div class="mod-label">New list</div>
     <div class="add-row" style="flex-direction:column;align-items:stretch;">
-      <input type="text" id="new-list-name" placeholder="List name (e.g. Gift Ideas)" />
-      <input type="text" id="new-list-first-item" placeholder="First item..." />
+      <input type="text" autocomplete="off" id="new-list-name" placeholder="List name (e.g. Gift Ideas)" />
+      <input type="text" autocomplete="off" id="new-list-first-item" placeholder="First item..." />
     </div>
     <div class="form-actions" style="margin-top:10px;">
       <button class="btn" onclick="saveNewList()">Add</button>
@@ -1870,7 +1870,7 @@ function renderTaskEditForm(t, siblingTasks){
     <div class="fields">
       <div class="field" style="flex:1 1 100%;">
         <label>Description</label>
-        <input type="text" id="ef-desc-${t.id}" value="${escapeHtml(t.description)}" />
+        <input type="text" autocomplete="off" id="ef-desc-${t.id}" value="${escapeHtml(t.description)}" />
       </div>
       <div class="field" style="flex:1 1 100%;">
         <label>Detail</label>
@@ -1996,7 +1996,15 @@ function renderProjectEditForm(p){
     <div class="fields">
       <div class="field" style="flex:1;">
         <label>Blocker</label>
-        <input type="text" id="ef-pblocker-${p.id}" value="${escapeHtml(p.blocker || '')}" placeholder="No current blocker" />
+        <input type="text" autocomplete="off" id="ef-pblocker-${p.id}" value="${escapeHtml(p.blocker || '')}" placeholder="No current blocker" />
+      </div>
+    </div>
+    <div class="fields">
+      <div class="field" style="flex-basis:100%;">
+        <label style="display:flex;align-items:center;gap:6px;font-weight:400;">
+          <input type="checkbox" id="ef-pisdefault-${p.id}" ${p.is_default ? 'checked' : ''} style="width:auto;" />
+          Default project for new tasks (quick-add falls back to this when unsure)
+        </label>
       </div>
     </div>
     <div class="fields">
@@ -2039,8 +2047,15 @@ async function saveProjectEdit(id){
   const blocker = document.getElementById(`ef-pblocker-${id}`).value.trim() || null;
   const notes = document.getElementById(`ef-pnotes-${id}`).value.trim() || null;
   const detail = document.getElementById(`ef-pdetail-${id}`).value.trim() || null;
+  const is_default = document.getElementById(`ef-pisdefault-${id}`).checked;
   try{
-    const { error } = await client.from('projects').update({ status, priority, next_deadline, blocker, notes, detail }).eq('id', id);
+    if (is_default){
+      // Only one project can be default — clear it from every other row first
+      // (the DB's partial unique index would otherwise reject this write).
+      const { error: clearErr } = await client.from('projects').update({ is_default: false }).neq('id', id).eq('is_default', true);
+      if (clearErr) throw clearErr;
+    }
+    const { error } = await client.from('projects').update({ status, priority, next_deadline, blocker, notes, detail, is_default }).eq('id', id);
     if (error) throw error;
     editingProjectId = null;
     await loadData();
@@ -2168,7 +2183,13 @@ async function addTask(projectId){
 async function submitQuickAdd(){
   const input = document.getElementById('quick-add-input');
   const text = (input.value || '').trim();
-  if (!text || quickAddLoading) return;
+  if (quickAddLoading) return;
+  if (!text){
+    const defaultProject = projects.find(p => p.is_default);
+    quickAddParsed = { text: '', project_id: defaultProject ? defaultProject.id : null, description: '', detail: null, due_date: null, due_time: null, priority: 3, not_before: null, estimate_minutes: null, is_event: false };
+    renderModal();
+    return;
+  }
   quickAddLoading = true;
   quickAddError = null;
   renderQuickAddBar();
@@ -2179,7 +2200,7 @@ async function submitQuickAdd(){
       body: JSON.stringify({
         text,
         today: localDateStr(),
-        projects: projects.filter(p => p.status !== 'done').map(p => ({ id: p.id, name: p.name })),
+        projects: projects.filter(p => p.status !== 'done').map(p => ({ id: p.id, name: p.name, is_default: !!p.is_default })),
       }),
     });
     const data = await resp.json();
@@ -2210,14 +2231,14 @@ function renderQuickAddConfirm(qa){
   const projectOptions = projects.filter(p => p.status !== 'done').sort((a,b) => a.name.localeCompare(b.name));
   return `
   <div class="modal-head">
-    <div class="modal-title">Confirm new task</div>
+    <div class="modal-title">${qa.text ? 'Confirm new task' : 'New task'}</div>
     <button class="icon-btn" title="Close" onclick="closeModal()">&#10005;</button>
   </div>
   <div class="row-edit" style="padding:0;border-top:none;">
     <div class="fields">
       <div class="field" style="flex:1 1 100%;">
         <label>Description</label>
-        <input type="text" id="qa-desc" value="${escapeHtml(qa.description || qa.text)}" />
+        <input type="text" autocomplete="off" id="qa-desc" value="${escapeHtml(qa.description || qa.text)}" placeholder="Describe the task (required)" />
       </div>
       <div class="field" style="flex:1 1 100%;">
         <label>Detail</label>
@@ -2241,14 +2262,14 @@ function renderQuickAddConfirm(qa){
         <input type="time" id="qa-duetime" value="${qa.due_time ? qa.due_time.slice(0,5) : ''}" onclick="this.showPicker && this.showPicker()" />
       </div>
       <div class="field">
+        <label>Not before</label>
+        <input type="date" id="qa-notbefore" value="${qa.not_before || ''}" onclick="this.showPicker && this.showPicker()" />
+      </div>
+      <div class="field">
         <label>Priority</label>
         <select id="qa-priority">
           ${[1,2,3,4,5].map(n => `<option value="${n}" ${n===qa.priority?'selected':''}>${n}</option>`).join('')}
         </select>
-      </div>
-      <div class="field">
-        <label>Not before</label>
-        <input type="date" id="qa-notbefore" value="${qa.not_before || ''}" onclick="this.showPicker && this.showPicker()" />
       </div>
       <div class="field">
         <label>Estimate</label>
@@ -2263,7 +2284,6 @@ function renderQuickAddConfirm(qa){
           Calendar event (fixed time, eg. reservation, appointment)
         </label>
       </div>
-      ${dateRefHelperHtml('qa-due')}
     </div>
     <div class="form-actions">
       <button class="btn" onclick="saveQuickAddTask()">Add task</button>
@@ -2501,7 +2521,7 @@ function renderSearchModal(){
       <button class="icon-btn" title="Close" onclick="closeModal()">&#10005;</button>
     </div>
     <div class="search-input-row">
-      <input type="text" id="search-input" value="${escapeAttr(searchQuery)}" placeholder="Search tasks, goals, projects&hellip;"
+      <input type="text" autocomplete="off" id="search-input" value="${escapeAttr(searchQuery)}" placeholder="Search tasks, goals, projects&hellip;"
         oninput="onSearchInput(this.value)" />
     </div>
     <div class="search-results">${resultsHtml}</div>`;

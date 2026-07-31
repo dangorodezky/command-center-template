@@ -395,6 +395,23 @@ alter table projects add column if not exists detail text;
 -- short status/identity summary, `detail` is everything else.
 
 -- ============================================================
+-- Migration: projects.is_default (run once if it didn't already exist)
+-- ============================================================
+alter table projects add column if not exists is_default boolean not null default false;
+-- Marks the one project new tasks fall back to when no other project is a
+-- better fit — e.g. the freeform quick-add parser (functions/parse-task.js)
+-- assigning a note it can't confidently categorize, or the "New task" blank
+-- modal pre-selecting a project instead of forcing a pick every time. Set
+-- via a checkbox in the project edit modal (renderProjectEditForm() in
+-- dashboard.html); saving with it checked clears the flag on every other
+-- project first, so at most one project is ever the default. The partial
+-- unique index below enforces that invariant at the DB level too, in case
+-- a write ever comes from outside the dashboard's own save path. No project
+-- is marked default out of the box — check the box on whichever project
+-- should be the catch-all once you've created your first one.
+create unique index if not exists one_default_project on projects (is_default) where is_default;
+
+-- ============================================================
 -- Seed data — none by default. The dashboard's "+ Add project" card
 -- handles creating your first project once it's connected. Uncomment
 -- and edit this to seed one from SQL instead, e.g.:
