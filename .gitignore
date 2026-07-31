@@ -1,0 +1,5 @@
+.DS_Store
+.claude/settings.local.json
+.dev.vars
+.wrangler/
+data/birthdays.csv

@@ -1,0 +1,2597 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Command Center</title>
+<link rel="icon" href="/icons/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="48x48" href="/icons/favicon-48.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=Newsreader:ital,wght@1,400;1,500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+  :root{
+    --ink:#0B0D11;
+    --panel-a:#171A20;
+    --panel-b:#121419;
+    --hairline:#262A31;
+    --ash:#9096A0;
+    --paper:#EEF0F3;
+    --signal:#5FD4C0;
+    --signal-2:#8FE8D8;
+    --coral:#E2725A;
+    --green:#5FBF8F;
+    --amber:#E3B057;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;overflow-x:hidden;}
+  body{
+    background:
+      radial-gradient(1000px 620px at 18% -14%, rgba(95,212,192,0.07), transparent 62%),
+      var(--ink);
+    background-attachment:fixed;
+    color:var(--paper);
+    font-family:"Manrope",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+    min-height:100vh;
+    padding:40px 24px 90px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-variant-numeric:tabular-nums;}
+
+  /* ---------- shared surface: gradient border, bright top / dark bottom ---------- */
+  .panel{
+    position:relative;border-radius:14px;border:1px solid transparent;
+    background:
+      linear-gradient(165deg, var(--panel-a), var(--panel-b)) padding-box,
+      linear-gradient(180deg, rgba(255,255,255,0.20), rgba(255,255,255,0.02) 45%, rgba(0,0,0,0.25)) border-box;
+    box-shadow:0 10px 26px -16px rgba(0,0,0,0.75);
+  }
+
+  /* ---------- header ---------- */
+  .topbar{
+    display:flex;justify-content:space-between;align-items:flex-end;
+    max-width:1160px;margin:0 auto 34px;flex-wrap:wrap;gap:16px;
+  }
+  .wordmark{
+    font-family:"IBM Plex Mono",ui-monospace,monospace;
+    font-size:11px;letter-spacing:0.2em;color:var(--ash);text-transform:uppercase;
+  }
+  .greeting{font-size:28px;font-weight:500;color:var(--paper);margin-top:8px;letter-spacing:-0.01em;}
+  .greeting em{font-family:"Newsreader",Georgia,serif;font-style:italic;font-weight:400;color:var(--signal);}
+  .brief{font-size:14px;color:var(--ash);margin-top:6px;}
+  .brief .n{color:var(--paper);font-weight:600;}
+  .brief .warn{color:var(--coral);font-weight:600;}
+  .date{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:13px;color:var(--ash);text-align:right;}
+
+  /* ---------- console layout: two columns, then a full-width row ---------- */
+  .console{max-width:1160px;margin:0 auto;display:flex;flex-direction:column;gap:20px;}
+  .console-row{display:grid;grid-template-columns:1.35fr 1fr;gap:20px;align-items:start;}
+  .console-col{display:flex;flex-direction:column;gap:20px;min-width:0;}
+  @media (max-width:820px){ .console-row{grid-template-columns:1fr;} }
+
+  .mod-label{
+    font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:10.5px;letter-spacing:0.1em;color:var(--ash);
+    text-transform:uppercase;padding:15px 18px 11px;display:flex;align-items:baseline;gap:8px;
+  }
+  .mod-label .idx{color:var(--signal);opacity:0.85;}
+  .mod-label .count{margin-left:auto;color:var(--ash);}
+  .fit-pills{display:flex;gap:4px;}
+  .fit-pill{
+    font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:9.5px;letter-spacing:0.02em;
+    background:none;border:1px solid var(--hairline);border-radius:20px;color:var(--ash);
+    padding:2px 8px;cursor:pointer;text-transform:none;
+  }
+  .fit-pill:hover{color:var(--paper);border-color:var(--ash);}
+  .fit-pill.active{color:var(--paper);border-color:var(--ash);background:rgba(255,255,255,0.06);}
+  .full-label{padding-left:2px;margin-bottom:2px;}
+
+  /* ---------- quick add (freeform task entry, backlog #12) ---------- */
+  .quickadd-wrap{max-width:1160px;margin:0 auto 20px;}
+  .quickadd-row{display:flex;gap:8px;padding:10px;}
+  .quickadd-row input[type=text]{flex:1;font-size:13.5px;padding:9px 12px;}
+  .quickadd-status{padding:0 14px 10px;font-size:12px;min-height:0;}
+  .qa-error{color:var(--coral);}
+  .search-trigger-btn{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+  .search-trigger-btn .search-kbd{
+    font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:9.5px;color:var(--ash);
+    border:1px solid var(--hairline);border-radius:4px;padding:0 4px;
+  }
+  @media (max-width:640px){ .search-trigger-btn .search-kbd{display:none;} }
+
+  /* ---------- search modal (⌘K) ---------- */
+  .search-input-row{padding:2px 4px 10px;}
+  .search-input-row input{width:100%;font-size:14px;padding:9px 12px;}
+  .search-group-label{
+    font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:9.5px;letter-spacing:0.1em;
+    color:var(--ash);text-transform:uppercase;padding:10px 4px 4px;
+  }
+  .search-result-row{padding:9px 4px;cursor:pointer;border-radius:6px;border-top:none;}
+  .search-result-row:hover{background:rgba(255,255,255,0.06);}
+  .search-result-row mark{background:none;color:var(--signal);font-weight:700;}
+  .type-chip{
+    font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:9px;text-transform:uppercase;letter-spacing:0.05em;
+    color:var(--ash);border:1px solid var(--hairline);border-radius:4px;padding:1px 6px;flex-shrink:0;
+  }
+
+  /* ---------- compact list rows (tasks, goals, metrics) ---------- */
+  .list{display:flex;flex-direction:column;}
+  .row{
+    display:flex;align-items:center;gap:10px;padding:9px 18px;
+    border-top:1px solid var(--hairline);font-size:13.5px;min-height:22px;
+  }
+  .row:first-child{border-top:none;}
+  .row.done .desc{color:var(--ash);text-decoration:line-through;}
+  .row.done{opacity:0.55;}
+  .row.waiting{opacity:0.5;}
+  .row.dragging{opacity:0.35;}
+  .row.drop-before{box-shadow:inset 0 2px 0 0 var(--signal);}
+  .row.drop-after{box-shadow:inset 0 -2px 0 0 var(--signal);}
+  .row .drag-handle{
+    flex-shrink:0;color:var(--ash);font-size:11px;letter-spacing:-1px;cursor:grab;
+    opacity:0.4;padding:2px 2px 2px 0;user-select:none;
+  }
+  .row .drag-handle:hover{opacity:0.9;}
+  .row.dragging .drag-handle{cursor:grabbing;}
+  .dot-orb{
+    width:8px;height:8px;border-radius:50%;flex-shrink:0;
+    background:radial-gradient(circle at 32% 28%, rgba(255,255,255,0.85), var(--c) 65%);
+  }
+  .chk{
+    appearance:none;-webkit-appearance:none;width:15px;height:15px;border-radius:5px;flex-shrink:0;
+    border:1.5px solid var(--hairline);cursor:pointer;position:relative;
+    background:linear-gradient(160deg, rgba(255,255,255,0.03), transparent);
+  }
+  .chk:checked{background:var(--tag, var(--signal));border-color:var(--tag, var(--signal));}
+  .chk:checked::after{
+    content:"";position:absolute;left:4px;top:1px;width:4px;height:8px;
+    border:solid var(--ink);border-width:0 2px 2px 0;transform:rotate(45deg);
+  }
+  .chk.just-checked{animation:checkPop 0.4s cubic-bezier(.34,1.56,.64,1);}
+  @keyframes checkPop{
+    0%{transform:scale(1);}
+    40%{transform:scale(1.45);}
+    100%{transform:scale(1);}
+  }
+  .burst-particle{
+    position:fixed;width:5px;height:5px;border-radius:50%;pointer-events:none;z-index:999;
+    animation:burstFly 0.55s ease-out forwards;
+  }
+  @keyframes burstFly{
+    0%{transform:translate(-50%,-50%) scale(1);opacity:1;}
+    100%{transform:translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.3);opacity:0;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .chk.just-checked{animation:none;}
+    .burst-particle{animation:none;display:none;}
+  }
+  .row .desc{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .row .tag{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:9.5px;text-transform:uppercase;letter-spacing:0.05em;flex-shrink:0;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .row .due{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:11px;color:var(--ash);flex-shrink:0;white-space:nowrap;}
+  .row .due.overdue{color:var(--coral);font-weight:700;}
+  .estimate{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:10.5px;color:var(--ash);flex-shrink:0;white-space:nowrap;opacity:0.8;}
+  .row .val{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:13px;font-weight:700;flex-shrink:0;}
+  .row .meta{font-size:11px;color:var(--ash);flex-shrink:0;font-family:"IBM Plex Mono",ui-monospace,monospace;}
+  .row .bar{display:inline-block;width:60px;height:4px;border-radius:20px;background:var(--ink);overflow:hidden;flex-shrink:0;}
+  .row .bar-fill{display:block;height:100%;border-radius:20px;}
+  .pill{
+    font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:9px;padding:2px 7px;border-radius:20px;flex-shrink:0;
+    text-transform:uppercase;letter-spacing:0.05em;
+  }
+  .pill.blocked{background:rgba(226,114,90,0.15);color:var(--coral);}
+  .pill.doing{background:rgba(227,176,87,0.15);color:var(--amber);}
+  .pill.event{background:rgba(255,255,255,0.08);color:var(--ash);}
+  .pill.blocker{background:rgba(227,176,87,0.15);color:var(--amber);}
+  .empty-stack, .empty-row{color:var(--ash);font-size:12.5px;padding:14px 18px;}
+
+  /* ---------- ticket row main/meta split (mobile layout hook, see media query below) ----------
+     Desktop keeps the exact old single-line look — .row-main is just a flex row so .desc
+     (flex:1) and .row-meta (flex-shrink:0) sit side by side exactly like the old flat
+     sibling layout did. Only the mobile breakpoint changes this to two lines. */
+  .row-main{display:flex;align-items:center;gap:8px;flex:1;min-width:0;}
+  .row-meta{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+  .row-legend{display:none;}
+
+  /* ---------- mobile: Today's Checklist / Next Up rows (backlog: Improve mobile UI display) ----------
+     Fixes descriptions truncating to 3-5 characters at phone widths — pills + project tag +
+     due date left almost nothing for .desc. Scoped to #checklist/#nextup only (not Goals,
+     Lists, or the project-tasks modal, which share the same .row class but weren't part of
+     this pass). Chosen direction (of 5 mocked variants, see chat/artifact history
+     2026-07-30): two-line row (desc on its own line, meta below), BLOCKED/BLOCKING pills
+     collapse to a plain color dot with a legend at the foot of each section, project tag
+     dropped entirely (due date + status dot is enough context once you're looking at your
+     phone's Today/Next Up list). Desktop is untouched by design, a deliberate choice. */
+  @media (max-width:640px){
+    #checklist .row-main, #nextup .row-main{flex-direction:column;align-items:flex-start;gap:5px;}
+    #checklist .row-main .desc, #nextup .row-main .desc{white-space:normal;overflow:visible;text-overflow:clip;}
+    #checklist .row-meta, #nextup .row-meta{flex-wrap:wrap;}
+    #checklist .row .tag, #nextup .row .tag{display:none;}
+    #checklist .pill.blocked, #nextup .pill.blocked,
+    #checklist .pill.blocker, #nextup .pill.blocker{
+      width:8px;height:8px;padding:0;border-radius:50%;font-size:0;overflow:hidden;flex-shrink:0;
+    }
+    #checklist .pill.blocked, #nextup .pill.blocked{background:var(--coral);}
+    #checklist .pill.blocker, #nextup .pill.blocker{background:var(--amber);}
+    #checklist .row-legend, #nextup .row-legend{
+      display:flex;gap:14px;padding:10px 18px 12px;
+      font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:9.5px;color:var(--ash);letter-spacing:0.02em;
+    }
+    .row-legend .dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:middle;}
+    .row-legend .dot.blocked{background:var(--coral);}
+    .row-legend .dot.blocker{background:var(--amber);}
+  }
+
+  /* ---------- Claude usage inline log row (ring lives in .habit-row, see below) ---------- */
+  .usage-chart-log{display:flex;gap:8px;align-items:center;padding:0 18px 14px;}
+
+  /* ---------- inline edit rows (share the list flow, no floating card) ---------- */
+  .row-edit{padding:12px 18px;border-top:1px solid var(--hairline);display:flex;flex-direction:column;gap:8px;}
+  .row-edit:first-child{border-top:none;}
+  .row-edit .fields{display:flex;gap:8px;flex-wrap:wrap;}
+  .row-edit input[type=text]{flex:1;min-width:140px;}
+  .row-edit textarea{width:100%;min-height:50px;resize:vertical;}
+  .field{display:flex;flex-direction:column;gap:3px;}
+  .field label{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:9.5px;color:var(--ash);text-transform:uppercase;letter-spacing:0.05em;}
+  input, select, textarea{
+    background:var(--ink);color:var(--paper);border:1px solid var(--hairline);border-radius:7px;
+    padding:6px 9px;font-size:12.5px;font-family:inherit;
+  }
+  input[type=date]{cursor:pointer;}
+  input[type=date]::-webkit-calendar-picker-indicator{filter:invert(0.8);cursor:pointer;padding:3px;border-radius:4px;}
+  input[type=date]::-webkit-calendar-picker-indicator:hover{background:rgba(255,255,255,0.12);}
+  .form-actions{display:flex;gap:8px;}
+
+  /* ---------- buttons ---------- */
+  .btn{
+    background:linear-gradient(180deg, var(--signal-2), var(--signal));color:#052722;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.5);
+    border:none;border-radius:8px;padding:7px 13px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;
+  }
+  .btn:hover{filter:brightness(1.05);}
+  .btn-danger{
+    background:linear-gradient(180deg, #e8998a, var(--coral));color:#3a0f08;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.4);
+    border:none;border-radius:8px;padding:7px 13px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;
+  }
+  .btn-danger:hover{filter:brightness(1.05);}
+  .btn-ghost{
+    position:relative;border-radius:8px;border:1px solid transparent;
+    background:
+      linear-gradient(165deg, var(--panel-a), var(--panel-b)) padding-box,
+      linear-gradient(180deg, rgba(255,255,255,0.18), rgba(0,0,0,0.2)) border-box;
+    color:var(--ash);padding:6px 13px;font-size:12.5px;cursor:pointer;font-family:inherit;
+  }
+  .btn-ghost:hover{color:var(--paper);}
+  .icon-btn{background:none;border:none;color:var(--ash);cursor:pointer;font-size:13px;padding:2px 5px;border-radius:5px;line-height:1;flex-shrink:0;}
+  .icon-btn:hover{color:var(--paper);background:rgba(255,255,255,0.07);}
+  .add-row-btn{
+    width:100%;text-align:left;background:none;border:none;border-top:1px solid var(--hairline);
+    color:var(--ash);font-size:12.5px;padding:10px 18px;cursor:pointer;font-family:inherit;
+  }
+  .add-row-btn:hover{color:var(--signal);}
+
+  /* ---------- habits ---------- */
+  .habit-row{display:flex;flex-wrap:wrap;gap:16px;padding:8px 18px 18px;}
+  .habit-card{display:flex;flex-direction:column;align-items:center;gap:6px;width:56px;}
+  .habit-ring{position:relative;width:48px;height:48px;}
+  .habit-ring-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:10px;font-weight:700;color:var(--paper);}
+  .habit-name{font-size:10px;color:var(--ash);text-align:center;line-height:1.2;}
+  .habit-card.clickable{cursor:pointer;}
+  .habit-card.clickable:hover .habit-name{color:var(--paper);}
+
+  /* ---------- projects (full width) ---------- */
+  /* Round-robin masonry, not a CSS grid — a grid's row height is set by its tallest
+     cell, which left visible gaps under shorter neighbors. Cards are assigned to
+     columns in strict priority order (A1,B1,C1,D1,A2,B2,...) in JS (renderGrid()),
+     then each .proj-col stacks independently so a tall card in one column never
+     pushes the next card down in another. */
+  .proj-grid{display:flex;gap:14px;align-items:flex-start;}
+  .proj-col{display:flex;flex-direction:column;gap:14px;flex:1;min-width:0;}
+  .lists-grid{display:flex;flex-wrap:wrap;gap:16px;opacity:0.8;}
+  .list-panel{position:relative;padding:18px 18px 16px;min-width:0;flex:0 1 180px;transition:flex-basis 0.28s ease, max-width 0.28s ease;}
+  .list-panel.expanded-panel{flex:1 1 420px;max-width:560px;}
+  /* ---------- mobile: two collapsed list panels per row (backlog: Improve mobile UI display) ----------
+     Collapsed panels are just a name (no metadata, see the 2026-07-29 note above), so a
+     fixed 180px basis left roughly half the row empty at phone widths — a 390px viewport
+     minus padding/gap can't fit two 180px panels, so flex-wrap dropped to one per row.
+     Percentage basis instead of a fixed px lets two sit side by side; opening one still
+     goes full-width, same as before. Desktop is untouched (this only applies ≤640px). */
+  @media (max-width:640px){
+    .list-panel{flex:1 1 calc(50% - 8px);}
+    .list-panel.expanded-panel{flex:1 1 100%;max-width:none;}
+  }
+  .list-delete-btn{
+    position:absolute;top:8px;right:8px;z-index:2;
+    background:none;border:none;color:var(--ash);cursor:pointer;font-size:12px;
+    width:20px;height:20px;line-height:1;border-radius:5px;
+  }
+  .list-delete-btn:hover{color:var(--coral);background:rgba(226,114,90,0.12);}
+  .list-confirm-card .mod-label{padding-bottom:6px;}
+  .list-confirm-card .confirm-copy{padding:0 18px 14px;font-size:12.5px;color:var(--ash);line-height:1.4;}
+  .list-confirm-card .form-actions{padding:0 18px 4px;}
+  .list-collapse{display:grid;grid-template-rows:0fr;transition:grid-template-rows 0.28s ease;}
+  .list-collapse.expanded{grid-template-rows:1fr;}
+  .list-collapse > .list{overflow:hidden;min-height:0;}
+  .list-panel .list .row{padding:7px 12px 7px 4px;gap:6px;}
+  .list-panel .row .drag-handle{font-size:10px;padding:2px 0;}
+  .list-item-edit-input{flex:1;min-width:0;}
+  .list-panel-header{cursor:pointer;user-select:none;flex-wrap:nowrap;}
+  .list-panel-header > span:nth-child(2){white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .list-panel-header .count{white-space:nowrap;}
+  .list-panel-header .header-right{margin-left:auto;flex-shrink:0;padding-right:16px;}
+  .list-panel-header .chevron{display:inline-block;transition:transform 0.15s;margin-right:2px;}
+  .list-panel-header.expanded .chevron{transform:rotate(90deg);}
+  .card{padding:14px 16px 14px 18px;min-width:0;position:relative;}
+  .card.dimmed{opacity:0.55;}
+  .card.dimmed:hover{opacity:0.85;}
+  .card::before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:3px;border-radius:3px;background:var(--edge, var(--hairline));}
+  .card-head{display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;}
+  .card-chevron{color:var(--ash);font-size:13px;flex-shrink:0;width:9px;text-align:center;transition:transform 0.18s ease;}
+  .card.open .card-chevron{transform:rotate(90deg);}
+  .card-title{font-size:15px;font-weight:600;letter-spacing:-0.01em;flex:1;min-width:0;cursor:pointer;}
+  .card-title:hover{color:var(--signal-2);}
+  .card-count-inline{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:11px;color:var(--ash);white-space:nowrap;}
+  .status-tag{
+    font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:9.5px;text-transform:uppercase;letter-spacing:0.05em;
+    padding:3px 9px;border-radius:20px;border:1px solid var(--hairline);color:var(--ash);flex-shrink:0;
+  }
+  .status-tag.paused{color:var(--amber);background:linear-gradient(160deg, rgba(227,176,87,0.16), rgba(227,176,87,0.04));border-color:rgba(227,176,87,0.32);}
+  .card-actions{display:flex;gap:8px;align-items:center;flex-shrink:0;}
+  .attn-pill{
+    font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:9.5px;letter-spacing:0.06em;font-weight:600;
+    padding:3px 8px;border-radius:20px;text-transform:uppercase;white-space:nowrap;
+  }
+  .attn-pill.red{color:var(--coral);background:rgba(226,114,90,0.15);border:1px solid rgba(226,114,90,0.32);}
+  .attn-pill.amber{color:var(--amber);background:rgba(227,176,87,0.15);border:1px solid rgba(227,176,87,0.32);}
+  .card-collapse{display:grid;grid-template-rows:0fr;transition:grid-template-rows 0.28s ease;}
+  .card.open .card-collapse{grid-template-rows:1fr;}
+  .card-collapse-inner{overflow:hidden;}
+  .card.open .card-collapse-inner{padding-top:10px;}
+  .card-note{font-size:12.5px;color:var(--ash);margin-bottom:8px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+  .deadline-line{font-size:12px;color:var(--ash);margin-bottom:8px;display:flex;align-items:center;gap:8px;}
+  .countdown-badge{
+    font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:10px;font-weight:600;color:var(--amber);
+    background:linear-gradient(160deg, rgba(227,176,87,0.16), rgba(227,176,87,0.04));
+    border:1px solid rgba(227,176,87,0.32);border-radius:20px;padding:2px 8px;white-space:nowrap;
+  }
+  .countdown-badge.today{color:var(--coral);background:linear-gradient(160deg, rgba(226,114,90,0.16), rgba(226,114,90,0.04));border-color:rgba(226,114,90,0.32);}
+  .countdown-badge.past{color:var(--ash);background:none;border-color:var(--hairline);}
+  .card-counts{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:11px;color:var(--ash);opacity:0.85;}
+  .task-list{margin-top:10px;border-top:1px solid var(--hairline);padding-top:6px;display:none;}
+  .task-list.open{display:block;}
+  .task-row{display:flex;align-items:center;gap:8px;padding:7px 0;font-size:13px;border-bottom:1px solid var(--hairline);}
+  .task-row:last-child{border-bottom:none;}
+  .task-row .t-desc{flex:1;min-width:0;}
+  .task-row.done .t-desc{color:var(--ash);text-decoration:line-through;}
+  .task-row select{font-size:11px;padding:3px 5px;font-family:"IBM Plex Mono",ui-monospace,monospace;}
+  .task-row .t-due{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:11px;color:var(--ash);white-space:nowrap;}
+  .task-row.waiting{opacity:0.5;}
+  .task-row.waiting select{pointer-events:none;opacity:0.6;}
+  .waiting-tag{display:block;font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:10px;color:var(--ash);margin-top:2px;text-transform:uppercase;letter-spacing:0.04em;}
+  .add-row{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;}
+  .add-row input[type=text]{flex:1;min-width:120px;}
+
+  .footer-note{max-width:1160px;margin:32px auto 0;color:var(--ash);font-size:11.5px;text-align:center;}
+  .config-warning{
+    max-width:1160px;margin:0 auto 24px;background:rgba(226,114,90,0.1);border:1px solid var(--coral);
+    border-radius:10px;padding:14px 16px;font-size:13px;color:var(--paper);
+  }
+  .config-warning code{background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:4px;}
+
+  /* ---------- modal popup (task edit, project edit, project task list) ---------- */
+  .modal-overlay{
+    position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;
+    padding:24px;background:rgba(5,6,9,0.72);backdrop-filter:blur(3px);
+  }
+  .modal-overlay.hidden{display:none;}
+  .modal-box{
+    width:100%;max-width:560px;max-height:min(720px, 85vh);overflow-y:auto;
+    padding:18px 20px 20px;
+  }
+  .modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px;}
+  .modal-title{
+    font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:11px;letter-spacing:0.08em;
+    text-transform:uppercase;color:var(--ash);display:flex;align-items:center;gap:8px;
+  }
+</style>
+</head>
+<body>
+
+<div id="app"></div>
+
+<script>
+// =====================================================================
+// 1) CONFIGURE THIS — paste your own Supabase project values below.
+//    Find them in Supabase: Project → Settings → API
+// =====================================================================
+const SUPABASE_URL = "YOUR_SUPABASE_URL_HERE";
+const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY_HERE";
+
+// Name shown in the topbar greeting ("Good morning, <em>Name</em>.").
+const USER_NAME = "there";
+// Key Metrics (age/weight/net worth) UI was hidden 2026-07-29 — infrequent
+// updates, no active goal tie-in yet. Data still logged to the `metrics`
+// table for future reference (e.g. a chart section like Claude Usage's);
+// just not rendered. See METRIC_DEFS/renderMetrics in git history if reviving.
+
+// Claude usage gets a pace-colored ring in the Habits row (not a plain metric
+// row) — see usageRingCardHtml()/paceColor() below. Weekly limit resets
+// Saturday 8:00pm local.
+const CLAUDE_USAGE_RESET_DOW = 6; // Saturday, JS Date convention (0=Sun..6=Sat)
+const CLAUDE_USAGE_RESET_HOUR = 20; // 8:00pm
+
+// Groups multiple recurring_tasks rows into a single Habits ring (e.g. AM/PM doses,
+// or several weekly activities that together represent one "did I move today" habit).
+// Matching is by description since there's no schema-level grouping column.
+// Empty by default — add a clause per group once you've created your own
+// weekly recurring_tasks rows (see scripts/sync_recurring.py). Example:
+//   { label: 'Fitness', match: d => ['Gym','Run','Yoga'].includes(d) }
+const HABIT_GROUPS = [];
+
+const app = document.getElementById("app");
+const configured = SUPABASE_URL.startsWith("http") && SUPABASE_ANON_KEY.length > 20;
+
+let client = null;
+let projects = [];
+let tasks = [];
+let goals = [];
+let metrics = [];
+let recurringTasks = [];
+let listItems = [];
+let editingTaskId = null;
+let editingProjectId = null;
+let openTasksProjectId = null;
+let searchOpen = false; // ⌘K search modal — searches tasks/goals/projects regardless of what's expanded/capped on screen
+let searchQuery = '';
+let editingGoalId = null;
+let addingGoal = false;
+let showCompletedChecklist = false;
+let showCompletedNextup = false;
+let nextUpExpanded = false; // false = capped at NEXT_UP_CAP; true = showing all actionable Next Up items
+let estimateFilterMinutes = null; // null = "All" — Next Up time-fits filter, see FIT_OPTIONS
+const NEXT_UP_CAP = 8;
+let goalsExpanded = false; // false = capped at GOALS_CAP; true = showing all goals
+const GOALS_CAP = 5; // tuned so the right column's bottom (Key Metrics) roughly lines up with Next Up's bottom in the left column
+const projectCardOverride = new Map(); // project id -> explicit user toggle (true/false), overrides the tier-based default open/collapsed state
+const justCompleted = new Set(); // task ids checked off this session — kept visible, sorted last, until next full reload
+
+// Freeform quick-add (backlog #12). quickAddParsed holds the LLM's structured guess
+// once returned — presence of a value opens the confirm modal (renderModal() checks
+// it first). Nothing is written to Supabase until the user confirms in that modal.
+let quickAddLoading = false;
+let quickAddError = null;
+let quickAddParsed = null; // { text, project_id, description, detail, due_date, due_time, priority, not_before, estimate_minutes, is_event }
+
+function render() {
+  if (!configured) {
+    app.innerHTML = `
+      <div class="topbar"><div class="wordmark">Command Center</div></div>
+      <div class="config-warning">
+        <strong>Not connected yet.</strong> Open this file, find <code>SUPABASE_URL</code> and
+        <code>SUPABASE_ANON_KEY</code> near the top of the script, and replace them with the values from your
+        Supabase project (Settings → API). Then reload this page.
+      </div>`;
+    return;
+  }
+
+  const today = new Date();
+  const todayStr = localDateStr(today);
+  const todayHeaderDate = today.toLocaleDateString(undefined, { weekday:'short', month:'short', day:'numeric' });
+  const overdueCount = tasks.filter(t => t.status !== 'done' && t.due_date && t.due_date < todayStr).length;
+  const blockedCount = tasks.filter(t => t.status === 'blocked').length + projects.filter(p => p.blocker).length;
+
+  const briefParts = [];
+  if (overdueCount) briefParts.push(`<span class="n warn">${overdueCount} overdue</span>`);
+  if (blockedCount) briefParts.push(`<span class="n warn">${blockedCount} blocked</span>`);
+  briefParts.push(`<span class="n">${projects.filter(p=>p.status==='active').length}</span> active projects`);
+
+  app.innerHTML = `
+    <div class="topbar">
+      <div>
+        <div class="wordmark">Command Center</div>
+        <div class="greeting">${greetingText()}</div>
+      </div>
+      <div style="text-align:right">
+        <div class="date" id="clock">${clockText()}</div>
+        <div class="brief">${briefParts.join(' &middot; ')}</div>
+      </div>
+    </div>
+
+    <div class="quickadd-wrap panel">
+      <div class="quickadd-row">
+        <input type="text" id="quick-add-input" placeholder="Add a task&hellip; e.g. &quot;work: pick up the Mendl's pastry order, by 3pm&quot;"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();submitQuickAdd();}" />
+        <button class="btn" id="quick-add-btn" onclick="submitQuickAdd()">Add</button>
+        <button class="btn-ghost search-trigger-btn" title="Search tasks, goals, projects" onclick="openSearch()">
+          &#9906; <span class="search-kbd">&#8984;K</span>
+        </button>
+      </div>
+      <div class="quickadd-status" id="quick-add-status"></div>
+    </div>
+
+    <div class="console">
+      <div class="console-row">
+        <div class="console-col">
+          <div class="panel">
+            <div class="mod-label"><span class="idx">01</span> Today's Checklist — ${todayHeaderDate} <span class="count mono" id="checklist-count"></span></div>
+            <div class="list" id="checklist"></div>
+          </div>
+          <div class="panel">
+            <div class="mod-label"><span class="idx">02</span> Next Up <span class="fit-pills" id="fit-pills"></span> <span class="count mono" id="nextup-count"></span></div>
+            <div class="list" id="nextup"></div>
+          </div>
+        </div>
+
+        <div class="console-col">
+          <div class="panel">
+            <div class="mod-label"><span class="idx">03</span> Habits — this week</div>
+            <div class="habit-row" id="habits"></div>
+          </div>
+          <div class="panel">
+            <div class="mod-label"><span class="idx">04</span> Calendar Look-ahead <span class="count mono" id="calendar-lookahead-count"></span></div>
+            <div class="list" id="calendar-lookahead"></div>
+          </div>
+          <div class="panel">
+            <div class="mod-label"><span class="idx">05</span> Goals <span class="count mono" id="goals-count"></span></div>
+            <div class="list" id="goals"></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="mod-label full-label"><span class="idx">06</span> Projects</div>
+        <div class="proj-grid" id="grid"></div>
+      </div>
+
+      <div>
+        <div class="mod-label full-label"><span class="idx">07</span> Lists</div>
+        <div class="lists-grid" id="lists"></div>
+      </div>
+    </div>
+
+    <div class="footer-note">Personal tracker · data lives in your own Supabase project</div>
+
+    <div class="modal-overlay hidden" id="modal-overlay" onclick="handleOverlayClick(event)">
+      <div class="panel modal-box" id="modal-box"></div>
+    </div>
+  `;
+
+  renderStacks();
+  renderCalendarLookahead();
+  renderGrid();
+  renderGoals();
+  renderHabits();
+  renderLists();
+  renderModal();
+  initDragReorder();
+}
+
+function projectFor(id){ return projects.find(p => p.id === id); }
+
+// ---------------------------------------------------------------------
+// "Compute date from" helper (task/event creation & editing) — lets a new
+// task's due_date be computed once, at creation/edit time, as an offset
+// from a project's deadline or another event's date (e.g. "book flight 2
+// weeks before a trip's deadline"). Deliberately NOT a stored relation —
+// no anchor/offset columns on `tasks` — it just fills in a plain due_date
+// value once; if the reference date later changes, this due_date does not
+// follow it. Reference list is bounded to project deadlines + is_event
+// tasks (not every task) since those are the meaningful anchors and stay a
+// manageable dropdown size.
+// ---------------------------------------------------------------------
+function dateReferenceOptions(){
+  const opts = [];
+  projects.filter(p => p.next_deadline).forEach(p =>
+    opts.push({ date: p.next_deadline, label: `${p.name} — deadline (${formatDate(p.next_deadline)})` }));
+  tasks.filter(t => t.is_event && t.due_date && t.status !== 'done').forEach(t =>
+    opts.push({ date: t.due_date, label: `${t.description} (${formatDate(t.due_date)})` }));
+  return opts;
+}
+
+function dateRefHelperHtml(dueInputId){
+  const opts = dateReferenceOptions();
+  if (!opts.length) return '';
+  return `
+  <div class="field" style="flex:1 1 100%;">
+    <label>Compute date from (optional)</label>
+    <div style="display:flex;gap:6px;align-items:center;">
+      <select id="dateref-select" style="flex:1;">
+        <option value="">— none —</option>
+        ${opts.map(o => `<option value="${escapeHtml(o.date)}">${escapeHtml(o.label)}</option>`).join('')}
+      </select>
+      <input type="number" id="dateref-offset" value="7" min="0" style="width:56px;" />
+      <select id="dateref-dir" style="width:110px;">
+        <option value="before">days before</option>
+        <option value="after">days after</option>
+      </select>
+      <button type="button" class="btn-ghost" onclick="applyDateRef('${dueInputId}')">Apply</button>
+    </div>
+  </div>`;
+}
+
+function applyDateRef(dueInputId){
+  const sel = document.getElementById('dateref-select');
+  const baseDate = sel.value;
+  if (!baseDate) return;
+  const offset = parseInt(document.getElementById('dateref-offset').value, 10) || 0;
+  const dir = document.getElementById('dateref-dir').value;
+  const computed = addDaysToDateStr(baseDate, dir === 'before' ? -offset : offset);
+  const dueInput = document.getElementById(dueInputId);
+  if (dueInput) dueInput.value = computed;
+}
+
+function gateFor(t){
+  // Returns null if the task is actionable now, or { label } describing why it
+  // isn't — either waiting on another task (blocked_by) or a future activation
+  // date (not_before). blocked_by is checked first when both are present.
+  if (t.blocked_by){
+    const b = tasks.find(x => x.id === t.blocked_by);
+    if (b && b.status !== 'done') return { label: `waiting on: ${b.description}` };
+  }
+  if (t.not_before){
+    const todayStr = localDateStr();
+    if (t.not_before > todayStr) return { label: `starts ${formatDate(t.not_before)}` };
+  }
+  return null;
+}
+
+function blockedChildrenOf(taskId){
+  return tasks.filter(x => x.blocked_by === taskId);
+}
+
+// A blocked_by child only makes its blocker "urgent to unblock" once nothing else
+// is gating it — a child still waiting on its own future not_before wouldn't
+// become actionable the moment the blocker finishes, so it shouldn't inflate the
+// blocker's urgency yet.
+function wouldBecomeActionable(t, todayStr){
+  return t.status !== 'done' && !(t.not_before && t.not_before > todayStr);
+}
+
+// A blocking task should be at least as urgent as the most urgent thing it's
+// gating — completing it is the only way that downstream task (or chain of
+// tasks) can move. Recurses through blocked_by chains so a task blocking a task
+// that blocks a p1 task inherits that urgency too. `visiting` guards against a
+// cycle (shouldn't exist given blocked_by is single-parent and set once at
+// creation, but a live read shouldn't infinite-loop if one ever sneaks in).
+function effectivePriority(t, todayStr, visiting){
+  visiting = visiting || new Set();
+  if (visiting.has(t.id)) return t.priority;
+  visiting.add(t.id);
+  let eff = t.priority;
+  for (const child of blockedChildrenOf(t.id)){
+    if (!wouldBecomeActionable(child, todayStr)) continue;
+    eff = Math.min(eff, effectivePriority(child, todayStr, visiting));
+  }
+  return eff;
+}
+
+function shapeTask(t, todayStr){
+  const p = projectFor(t.project_id);
+  const overdue = t.status === 'done'
+    ? (t.due_date && t.completed_at && t.completed_at.slice(0,10) > t.due_date)
+    : (t.due_date && t.due_date < todayStr);
+  const dueToday = t.due_date === todayStr;
+  const effPriority = effectivePriority(t, todayStr);
+  const blocksCount = blockedChildrenOf(t.id).filter(c => wouldBecomeActionable(c, todayStr)).length;
+  const score = (t.status === 'blocked' ? -100 : 0) + (overdue ? -50 : 0) + effPriority
+                + (t.due_date ? 0 : 10);
+  return { ...t, projectName: p ? p.name : '—', color: p ? p.color : '#4C8BF5', overdue, dueToday, score, effPriority, blocksCount };
+}
+
+function actionableTasks(){
+  const todayStr = localDateStr();
+  return tasks
+    .filter(t => (t.status !== 'done' || justCompleted.has(t.id)) && !gateFor(t))
+    .map(t => shapeTask(t, todayStr));
+}
+
+function dueLabel(t){
+  if (!t.due_date) return '';
+  // In Today's Checklist, the date is redundant with the section's own header date —
+  // show just the time (or "today" if none). Overdue items show a day count instead of
+  // repeating a stale date. Elsewhere (Next Up, project task lists), show the full date.
+  if (t.dueToday) return t.due_time ? formatTime(t.due_time) : 'today';
+  if (t.overdue) {
+    const days = t.status === 'done'
+      ? Math.round((new Date(t.completed_at.slice(0,10)) - new Date(t.due_date)) / 86400000)
+      : Math.abs(daysUntil(t.due_date));
+    return `${days}d overdue`;
+  }
+  return formatDate(t.due_date) + (t.due_time ? `, ${formatTime(t.due_time)}` : '');
+}
+
+const FIT_OPTIONS = [15, 30, 60, 120]; // matches the estimate_minutes round-bucket convention
+
+function fitPillsHtml(){
+  const pills = FIT_OPTIONS.map(m =>
+    `<button class="fit-pill ${estimateFilterMinutes === m ? 'active' : ''}" onclick="setEstimateFilter(${m})">&le;${estimateLabel(m)}</button>`
+  ).join('');
+  return `${pills}<button class="fit-pill ${estimateFilterMinutes === null ? 'active' : ''}" onclick="setEstimateFilter(null)">All</button>`;
+}
+
+function setEstimateFilter(minutes){
+  estimateFilterMinutes = estimateFilterMinutes === minutes ? null : minutes;
+  nextUpExpanded = false;
+  renderStacks();
+}
+
+function estimateLabel(minutes){
+  if (minutes == null) return '';
+  if (minutes < 60) return `${minutes}m`;
+  if (minutes < 1440) {
+    const h = minutes / 60;
+    return `${Number.isInteger(h) ? h : h.toFixed(1)}h`;
+  }
+  const d = minutes / 1440;
+  return `${Number.isInteger(d) ? d : d.toFixed(1)}d`;
+}
+
+function ticketRowHtml(t){
+  const done = t.status === 'done';
+  return `
+    <div class="row ${done ? 'done' : ''}" draggable="${done ? 'false' : 'true'}" data-task-id="${t.id}">
+      <span class="drag-handle" title="Drag to reorder">&#8942;&#8942;</span>
+      <input type="checkbox" class="chk" style="--tag:${t.color}" ${done ? 'checked' : ''}
+        title="Mark done" onchange="toggleTicketDone('${t.id}', this)" />
+      <div class="row-main">
+        <span class="desc">${escapeHtml(t.description)}</span>
+        <div class="row-meta">
+          ${t.is_event ? `<span class="pill event">event</span>` : ``}
+          ${t.blocksCount ? `<span class="pill blocker" title="Unblocks ${t.blocksCount} task${t.blocksCount > 1 ? 's' : ''} once done">blocking</span>` : ``}
+          ${t.status !== 'open' ? `<span class="pill ${t.status}">${t.status}</span>` : ``}
+          ${t.estimate_minutes != null ? `<span class="estimate">~${estimateLabel(t.estimate_minutes)}</span>` : ``}
+          <span class="tag" style="color:${t.color}">${escapeHtml(t.projectName)}</span>
+          ${t.due_date ? `<span class="due ${t.overdue ? 'overdue':''}">${dueLabel(t)}</span>` : ``}
+        </div>
+      </div>
+      <button class="icon-btn" title="Edit" onclick="startEditTask('${t.id}')">&#9998;</button>
+    </div>
+  `;
+}
+
+function rowLegendHtml(list){
+  const hasBlocked = list.some(t => t.status === 'blocked');
+  const hasBlocking = list.some(t => t.blocksCount);
+  if(!hasBlocked && !hasBlocking) return "";
+  return `<div class="row-legend">`
+    + (hasBlocked ? `<span><i class="dot blocked"></i>blocked</span>` : "")
+    + (hasBlocking ? `<span><i class="dot blocker"></i>blocking</span>` : "")
+    + `</div>`;
+}
+
+function completedToggleHtml(section, isOpen, count){
+  return `<button class="add-row-btn" onclick="toggleShowCompleted('${section}')">${isOpen ? 'Hide' : 'Show'} completed (${count})</button>`;
+}
+
+function renderStacks(){
+  const todayStr = localDateStr();
+  const all = actionableTasks();
+
+  // Today's Checklist: overdue or due today. No cap — this is meant to be an
+  // honest reflection of the day's workload, not a curated top-N.
+  const checklist = all
+    .filter(t => t.overdue || t.dueToday)
+    .sort((a,b) => justCompleted.has(a.id) - justCompleted.has(b.id)
+                 || (a.due_date || '').localeCompare(b.due_date || '')
+                 || (a.due_time || '99:99').localeCompare(b.due_time || '99:99')
+                 || a.effPriority - b.effPriority);
+  const checklistIds = new Set(checklist.map(t => t.id));
+
+  // Next Up: everything else actionable, ranked by the same score as before,
+  // capped at NEXT_UP_CAP by default (expandable via nextUpExpanded — see the
+  // "Show N more" button below, which exists so the count/cap is never silently
+  // hiding items). status='blocked' still floats to the top here since it's not
+  // date-driven but still needs attention.
+  const nextUpAll = all
+    .filter(t => !checklistIds.has(t.id))
+    .filter(t => !t.is_event) // events aren't to-dos — see Calendar Look-ahead instead
+    .filter(t => estimateFilterMinutes == null || t.estimate_minutes != null && t.estimate_minutes <= estimateFilterMinutes)
+    .sort((a,b) => justCompleted.has(a.id) - justCompleted.has(b.id)
+                 || a.score - b.score
+                 || (a.due_date || '9999-99-99').localeCompare(b.due_date || '9999-99-99')
+                 || (a.due_time || '99:99').localeCompare(b.due_time || '99:99'));
+  const nextUp = nextUpExpanded ? nextUpAll : nextUpAll.slice(0, NEXT_UP_CAP);
+  const nextUpHiddenCount = nextUpAll.length - nextUp.length;
+
+  document.getElementById("fit-pills").innerHTML = fitPillsHtml();
+
+  // Tasks completed in an earlier session (not in justCompleted, so they'd otherwise
+  // vanish on reload per the normal status!=='done' filter) — kept out of view by
+  // default, revealed via the "Show completed" toggle per section.
+  const doneExtra = tasks
+    .filter(t => t.status === 'done' && !justCompleted.has(t.id))
+    .map(t => shapeTask(t, todayStr))
+    .sort((a,b) => (b.completed_at || '').localeCompare(a.completed_at || ''));
+  const doneChecklistExtra = doneExtra.filter(t => t.overdue || t.dueToday).slice(0, 20);
+  const doneNextupExtra = doneExtra.filter(t => !(t.overdue || t.dueToday)).slice(0, 15);
+
+  document.getElementById("checklist-count").textContent = checklist.length || '';
+  const checklistEl = document.getElementById("checklist");
+  checklistEl.innerHTML = (checklist.length
+    ? checklist.map(ticketRowHtml).join("")
+    : `<div class="empty-row">Nothing due today or overdue. Check Next Up below.</div>`)
+    + (showCompletedChecklist ? doneChecklistExtra.map(ticketRowHtml).join("") : "")
+    + (doneChecklistExtra.length ? completedToggleHtml('checklist', showCompletedChecklist, doneChecklistExtra.length) : "")
+    + rowLegendHtml(checklist);
+
+  document.getElementById("nextup-count").textContent = nextUpAll.length
+    ? (nextUpHiddenCount > 0 ? `${nextUp.length} of ${nextUpAll.length}` : `${nextUpAll.length}`)
+    : '';
+  const nextUpEl = document.getElementById("nextup");
+  nextUpEl.innerHTML = (nextUp.length
+    ? nextUp.map(ticketRowHtml).join("")
+    : estimateFilterMinutes != null
+      ? `<div class="empty-row">Nothing estimated at or under ${estimateLabel(estimateFilterMinutes)}.</div>`
+      : `<div class="empty-row">Nothing else queued. Add tasks below to populate this.</div>`)
+    + (nextUpHiddenCount > 0 ? `<button class="add-row-btn" onclick="toggleNextUpExpanded()">Show ${nextUpHiddenCount} more</button>` : "")
+    + (nextUpExpanded && nextUpAll.length > NEXT_UP_CAP ? `<button class="add-row-btn" onclick="toggleNextUpExpanded()">Show fewer</button>` : "")
+    + (showCompletedNextup ? doneNextupExtra.map(ticketRowHtml).join("") : "")
+    + (doneNextupExtra.length ? completedToggleHtml('nextup', showCompletedNextup, doneNextupExtra.length) : "")
+    + rowLegendHtml(nextUp);
+}
+
+function toggleNextUpExpanded(){
+  nextUpExpanded = !nextUpExpanded;
+  renderStacks();
+}
+
+function toggleShowCompleted(section){
+  if (section === 'checklist') showCompletedChecklist = !showCompletedChecklist;
+  else showCompletedNextup = !showCompletedNextup;
+  renderStacks();
+}
+
+const LOOKAHEAD_MAX_DAYS = 30;
+
+function calendarLookahead(){
+  // Events (is_event=true) due after today, not yet done, not gated. Shows
+  // every upcoming event up to LOOKAHEAD_MAX_DAYS out — a fixed window, not
+  // count-based. Since 30 > 7 this always covers at least "everything in the
+  // next 7 days" as a subset; it just never reaches past the 30-day cap even
+  // during a quiet stretch with few events.
+  const todayStr = localDateStr();
+  const windowEnd = addDaysToDateStr(todayStr, LOOKAHEAD_MAX_DAYS);
+  return tasks
+    .filter(t => t.is_event && t.status !== 'done' && t.due_date && t.due_date > todayStr && t.due_date <= windowEnd && !gateFor(t))
+    .map(t => shapeTask(t, todayStr))
+    .sort((a,b) => a.due_date.localeCompare(b.due_date) || (a.due_time || '99:99').localeCompare(b.due_time || '99:99'));
+}
+
+function formatDateWithWeekday(d){
+  const dt = new Date(d + "T00:00:00");
+  return dt.toLocaleDateString(undefined, { weekday:'short', month:'short', day:'numeric' }).replace(',', '.');
+}
+
+function eventRowHtml(t){
+  return `
+    <div class="row" data-task-id="${t.id}">
+      <span class="desc">${escapeHtml(t.description)}</span>
+      <span class="due">${formatDateWithWeekday(t.due_date)}${t.due_time ? `, ${formatTime(t.due_time)}` : ''}</span>
+      <button class="icon-btn" title="Edit" onclick="startEditTask('${t.id}')">&#9998;</button>
+    </div>`;
+}
+
+function renderCalendarLookahead(){
+  const events = calendarLookahead();
+  const countEl = document.getElementById('calendar-lookahead-count');
+  if (countEl) countEl.textContent = events.length || '';
+  const el = document.getElementById('calendar-lookahead');
+  if (!el) return;
+  el.innerHTML = events.length
+    ? events.map(eventRowHtml).join('')
+    : `<div class="empty-row">Nothing on the calendar yet.</div>`;
+}
+
+// ---------------------------------------------------------------------
+// Drag-to-reorder for Today's Checklist / Next Up (added 2026-07-28).
+//
+// Both sections are computed sort orders (due_date/due_time/priority for
+// the checklist; blocked/overdue/priority/due_date score for Next Up —
+// see shapeTask() and renderStacks()), so a drag doesn't set a hidden
+// manual rank. It mutates the real fields those sorts already read:
+//   - dropping a task adjacent to another sets its `priority` to match
+//     that neighbor's, so it sorts next to where it was dropped (fine
+//     control is limited to priority's 5 levels + the existing due_date/
+//     due_time tiebreakers — dragging past that granularity, e.g.
+//     reordering two same-priority same-day items with different
+//     due_time, won't stick, by design: due_time is real information).
+//   - dragging into Today's Checklist also sets `due_date` to today, the
+//     same effect the field already has elsewhere in the app. Dragging
+//     the other direction (out of the checklist into Next Up) is not
+//     supported — there's no honest due_date to set without guessing one.
+// ---------------------------------------------------------------------
+let dragTaskId = null;
+
+function clearDropMarkers(container){
+  container.querySelectorAll('.drop-before,.drop-after').forEach(r => r.classList.remove('drop-before','drop-after'));
+}
+
+function onDragStart(e){
+  const row = e.target.closest('.row[draggable="true"]');
+  if (!row) return;
+  dragTaskId = row.dataset.taskId;
+  row.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', dragTaskId);
+}
+
+function onDragOver(e){
+  if (!dragTaskId) return;
+  e.preventDefault();
+  const container = e.currentTarget;
+  const row = e.target.closest('.row[draggable="true"]');
+  clearDropMarkers(container);
+  if (!row || row.dataset.taskId === dragTaskId) return;
+  const rect = row.getBoundingClientRect();
+  row.classList.add((e.clientY - rect.top) < rect.height / 2 ? 'drop-before' : 'drop-after');
+}
+
+function onDragEnd(){
+  document.querySelectorAll('.row.dragging').forEach(r => r.classList.remove('dragging'));
+  document.querySelectorAll('#checklist, #nextup').forEach(clearDropMarkers);
+  dragTaskId = null;
+}
+
+async function onDrop(e){
+  e.preventDefault();
+  const container = e.currentTarget;
+  const row = e.target.closest('.row[draggable="true"]');
+  const taskId = dragTaskId;
+  clearDropMarkers(container);
+  document.querySelectorAll('.row.dragging').forEach(r => r.classList.remove('dragging'));
+  dragTaskId = null;
+  if (!taskId || !row || row.dataset.taskId === taskId) return;
+
+  const draggedTask = tasks.find(t => t.id === taskId);
+  if (!draggedTask) return;
+
+  const rect = row.getBoundingClientRect();
+  const before = (e.clientY - rect.top) < rect.height / 2;
+  const rows = Array.from(container.querySelectorAll('.row[draggable="true"]')).filter(r => r.dataset.taskId !== taskId);
+  const targetIndex = rows.indexOf(row);
+  const insertIndex = before ? targetIndex : targetIndex + 1;
+  const neighborRow = rows[insertIndex] || rows[insertIndex - 1];
+  const neighborTask = neighborRow ? tasks.find(t => t.id === neighborRow.dataset.taskId) : null;
+
+  const update = {};
+  if (neighborTask) update.priority = neighborTask.priority;
+  const todayStr = localDateStr();
+  if (container.id === 'checklist' && !(draggedTask.due_date && draggedTask.due_date <= todayStr)) {
+    update.due_date = todayStr;
+  }
+  if (Object.keys(update).length === 0) return;
+
+  try{
+    const { error } = await client.from('tasks').update(update).eq('id', taskId);
+    if (error) throw error;
+    Object.assign(draggedTask, update);
+    renderStacks();
+  } catch(err){
+    alert('Could not reorder task: ' + (err.message || err));
+  }
+}
+
+function initDragReorder(){
+  ['checklist', 'nextup'].forEach(id => {
+    const el = document.getElementById(id);
+    el.addEventListener('dragstart', onDragStart);
+    el.addEventListener('dragover', onDragOver);
+    el.addEventListener('drop', onDrop);
+    el.addEventListener('dragend', onDragEnd);
+  });
+}
+
+// Attention tier for a project card — answers "does this need me right now,"
+// not "how much is done." Red is reserved for actual time pressure (an
+// actionable non-done task overdue or due today, automated/recurring
+// occurrences included — due today is due today regardless of why). Amber
+// covers "stuck," using the real status='blocked' signal rather than the
+// free-text `blocker` field (which is often just an FYI note, e.g. a
+// project's own "waiting on a third-party approval"). Anything else is quiet.
+function projectAttention(pid){
+  const pTasks = tasks.filter(t => t.project_id === pid && t.status !== 'done');
+  let maxOverdueDays = 0, dueToday = false;
+  for (const t of pTasks){
+    if (!t.due_date) continue;
+    const d = daysUntil(t.due_date);
+    if (d < 0) maxOverdueDays = Math.max(maxOverdueDays, -d);
+    else if (d === 0) dueToday = true;
+  }
+  if (maxOverdueDays > 0) return { tier:'red', label:`${maxOverdueDays}D OVERDUE` };
+  if (dueToday) return { tier:'red', label:'DUE TODAY' };
+  if (pTasks.some(t => t.status === 'blocked')) return { tier:'amber', label:'BLOCKED' };
+  return { tier:'quiet', label:null };
+}
+
+const PROJECT_TIER_RANK = { red:0, amber:1, quiet:2 };
+
+// Default open/collapsed state: priority 1-2 always start open, and any
+// project that's currently red/amber starts open regardless of priority —
+// something on fire shouldn't be hidden just because it's normally a "held
+// option." Only a quiet priority 3-5 project starts collapsed. An explicit
+// click always overrides this default for the rest of the session.
+function projectCardDefaultOpen(p, tier){
+  return p.priority <= 2 || tier !== 'quiet';
+}
+function isProjectCardOpen(p, tier){
+  return projectCardOverride.has(p.id) ? projectCardOverride.get(p.id) : projectCardDefaultOpen(p, tier);
+}
+function toggleProjectCard(id, currentlyOpen){
+  projectCardOverride.set(id, !currentlyOpen);
+  renderGrid();
+}
+
+function projectCountsLabel(pTasks){
+  const openCount = pTasks.filter(t=>(t.status==='open'||t.status==='doing') && !gateFor(t)).length;
+  const blockedCount = pTasks.filter(t=>t.status==='blocked').length;
+  const waitingCount = pTasks.filter(t=>t.status!=='done' && gateFor(t)).length;
+  const doneCount = pTasks.filter(t=>t.status==='done').length;
+  const parts = [];
+  if (openCount) parts.push(`${openCount} open`);
+  if (blockedCount) parts.push(`${blockedCount} blocked`);
+  if (waitingCount) parts.push(`${waitingCount} waiting`);
+  if (doneCount) parts.push(`${doneCount} done`);
+  return parts.length ? parts.join(' · ') : 'no tasks yet';
+}
+
+const PROJECT_GRID_MIN_CARD_WIDTH = 240; // matches the old CSS-grid auto-fill minmax(240px,1fr)
+const PROJECT_GRID_GAP = 14;
+
+// Column count derived from the grid's own current width, same math CSS auto-fill was
+// doing implicitly — kept in JS now because column assignment (below) has to know the
+// count up front, not just let the browser wrap.
+function projectColumnCount(gridEl){
+  const width = gridEl.clientWidth || gridEl.parentElement?.clientWidth || 0;
+  if (!width) return 1;
+  return Math.max(1, Math.floor((width + PROJECT_GRID_GAP) / (PROJECT_GRID_MIN_CARD_WIDTH + PROJECT_GRID_GAP)));
+}
+
+function renderGrid(){
+  const gridEl = document.getElementById("grid");
+  const sortedProjects = projects.map(p => ({ p, attn: projectAttention(p.id) }))
+    .sort((a,b) => (a.p.status==='done') - (b.p.status==='done')
+      || PROJECT_TIER_RANK[a.attn.tier] - PROJECT_TIER_RANK[b.attn.tier]
+      || a.p.priority - b.p.priority
+      || (a.p.next_deadline||'9999-99-99').localeCompare(b.p.next_deadline||'9999-99-99'));
+
+  const cardsHtml = sortedProjects.map(({ p, attn }) => {
+    const pTasks = tasks.filter(t => t.project_id === p.id)
+      .sort((a,b) => (a.status==='done') - (b.status==='done') || a.priority - b.priority);
+    const open = isProjectCardOpen(p, attn.tier);
+    const pillHtml = attn.tier !== 'quiet'
+      ? `<span class="attn-pill ${attn.tier}">${attn.label}</span>`
+      : `<span class="card-count-inline">${pTasks.filter(t=>(t.status==='open'||t.status==='doing') && !gateFor(t)).length} open</span>`;
+    return `
+    <div class="panel card ${p.status!=='active'?'dimmed':''} ${open?'open':''}" style="--edge:${p.color}">
+      <div class="card-head" onclick="toggleProjectCard('${p.id}', ${open})">
+        <span class="card-chevron">&#8250;</span>
+        <div class="card-title" onclick="event.stopPropagation(); openProjectTasks('${p.id}')">${escapeHtml(p.name)}</div>
+        <div class="card-actions">
+          ${pillHtml}
+          ${p.status!=='active' ? `<span class="status-tag ${p.status}">${p.status}</span>` : ``}
+          <button class="icon-btn" title="Edit project" onclick="event.stopPropagation(); startEditProject('${p.id}')">&#9998;</button>
+        </div>
+      </div>
+      <div class="card-collapse"><div class="card-collapse-inner">
+        ${(p.blocker || p.notes) ? `<div class="card-note">${escapeHtml(p.blocker || p.notes)}</div>` : ``}
+        ${p.status==='done' && p.completed_at ? `<div class="deadline-line">Completed ${formatDate(p.completed_at.slice(0,10))}</div>` : ``}
+        ${p.next_deadline ? `<div class="deadline-line">Next deadline: ${formatDate(p.next_deadline)} ${countdownBadge(p.next_deadline)}</div>` : ``}
+        <div class="card-counts">${projectCountsLabel(pTasks)}</div>
+      </div></div>
+    </div>`;
+  });
+
+  const numCols = projectColumnCount(gridEl);
+  const columns = Array.from({ length: numCols }, () => []);
+  cardsHtml.forEach((html, i) => columns[i % numCols].push(html));
+  gridEl.innerHTML = columns.map(col => `<div class="proj-col">${col.join("")}</div>`).join("");
+}
+
+function openProjectTasks(id){
+  openTasksProjectId = id;
+  renderModal();
+}
+
+function renderProjectTasksModal(pid){
+  const p = projectFor(pid);
+  if (!p) return '';
+  const todayStr = localDateStr();
+  const pTasks = tasks.filter(t => t.project_id === pid)
+    .sort((a,b) => (a.status==='done') - (b.status==='done')
+                 || effectivePriority(a, todayStr) - effectivePriority(b, todayStr));
+  return `
+    <div class="modal-head">
+      <div class="modal-title">
+        <span class="dot-orb" style="--c:${p.color}"></span>
+        ${escapeHtml(p.name)} — Tasks
+      </div>
+      <button class="icon-btn" title="Close" onclick="closeModal()">&#10005;</button>
+    </div>
+    <div class="task-list open" style="margin-top:0;border-top:none;padding-top:0;">
+      ${pTasks.map(t => {
+        const gate = gateFor(t);
+        const blocksCount = blockedChildrenOf(t.id).filter(c => wouldBecomeActionable(c, todayStr)).length;
+        return `
+        <div class="task-row ${t.status==='done'?'done':''} ${gate?'waiting':''}">
+          <select onchange="updateTaskStatus('${t.id}', this.value)">
+            ${['open','doing','blocked','done'].map(s => `<option value="${s}" ${s===t.status?'selected':''}>${s}</option>`).join('')}
+          </select>
+          <span class="t-desc">${escapeHtml(t.description)}${t.is_event ? `<span class="pill event">event</span>` : ''}${blocksCount ? `<span class="pill blocker" title="Unblocks ${blocksCount} task${blocksCount > 1 ? 's' : ''} once done">blocking</span>` : ''}${gate ? `<span class="waiting-tag">${escapeHtml(gate.label)}</span>` : ''}</span>
+          ${t.estimate_minutes != null ? `<span class="estimate">~${estimateLabel(t.estimate_minutes)}</span>` : ``}
+          <span class="t-due">${t.status==='done' && t.completed_at ? `done ${formatDate(t.completed_at.slice(0,10))}` : (t.due_date ? dueLabel(t) : '')}</span>
+          <button class="icon-btn" title="Edit" onclick="startEditTask('${t.id}')">&#9998;</button>
+        </div>
+      `;
+      }).join('') || `<div style="color:var(--ash);font-size:12.5px;">No tasks yet.</div>`}
+
+      <div class="add-row">
+        <input type="text" id="new-task-${p.id}" placeholder="New task..." />
+        <input type="date" id="new-task-date-${p.id}" onclick="this.showPicker && this.showPicker()" />
+        <input type="time" id="new-task-time-${p.id}" onclick="this.showPicker && this.showPicker()" />
+        <button class="btn" onclick="addTask('${p.id}')">Add</button>
+      </div>
+    </div>`;
+}
+
+function goalRowHtml(g){
+  const project = g.project_id ? projectFor(g.project_id) : null;
+  const measurable = g.target_value !== null && g.target_value !== undefined;
+  const pct = measurable && g.target_value > 0
+    ? Math.max(0, Math.min(100, Math.round(((g.current_value || 0) / g.target_value) * 100)))
+    : 0;
+  return `
+  <div class="row ${g.status !== 'active' ? 'done' : ''}">
+    <span class="desc" title="${escapeHtml(g.description)}">${escapeHtml(g.description)}</span>
+    ${measurable
+      ? `<span class="bar"><span class="bar-fill" style="width:${pct}%;background:${project ? project.color : 'var(--signal)'}"></span></span><span class="meta">${pct}%</span>`
+      : `<span class="meta">${g.status}</span>`}
+    <button class="icon-btn" title="Edit" onclick="startEditGoal('${g.id}')">&#9998;</button>
+  </div>`;
+}
+
+function goalEditFormHtml(g){
+  return `
+  <div class="row-edit">
+    <div class="fields">
+      <div class="field" style="flex:1 1 100%;">
+        <label>Description</label>
+        <input type="text" id="ef-gdesc-${g.id}" value="${escapeHtml(g.description)}" />
+      </div>
+    </div>
+    <div class="fields">
+      <div class="field" style="flex:1;">
+        <label>Project (optional)</label>
+        <select id="ef-gproject-${g.id}">
+          <option value="">— none —</option>
+          ${projects.map(p => `<option value="${p.id}" ${p.id===g.project_id?'selected':''}>${escapeHtml(p.name)}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="fields">
+      <div class="field">
+        <label>Current</label>
+        <input type="number" id="ef-gcurrent-${g.id}" value="${g.current_value ?? ''}" placeholder="optional" style="width:80px;" />
+      </div>
+      <div class="field">
+        <label>Target</label>
+        <input type="number" id="ef-gtarget-${g.id}" value="${g.target_value ?? ''}" placeholder="optional" style="width:80px;" />
+      </div>
+      <div class="field">
+        <label>Unit</label>
+        <input type="text" id="ef-gunit-${g.id}" value="${escapeHtml(g.unit || '')}" placeholder="e.g. followers" style="width:100px;" />
+      </div>
+    </div>
+    <div class="fields">
+      <div class="field">
+        <label>Target date</label>
+        <input type="date" id="ef-gdate-${g.id}" value="${g.target_date || ''}" onclick="this.showPicker && this.showPicker()" />
+      </div>
+      <div class="field">
+        <label>Status</label>
+        <select id="ef-gstatus-${g.id}">
+          ${['active','done','abandoned'].map(s => `<option value="${s}" ${s===g.status?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn" onclick="saveGoalEdit('${g.id}')">Save</button>
+      <button class="btn-ghost" onclick="cancelEditGoal()">Cancel</button>
+    </div>
+  </div>`;
+}
+
+function addGoalFormHtml(){
+  if (!addingGoal) {
+    return `<button class="add-row-btn" onclick="startAddGoal()">+ Add goal</button>`;
+  }
+  return `
+  <div class="row-edit">
+    <div class="fields">
+      <div class="field" style="flex:1 1 100%;">
+        <label>Description</label>
+        <input type="text" id="ng-desc" placeholder="e.g. Get better at golf" />
+      </div>
+    </div>
+    <div class="fields">
+      <div class="field" style="flex:1;">
+        <label>Project (optional)</label>
+        <select id="ng-project">
+          <option value="">— none —</option>
+          ${projects.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="fields">
+      <div class="field">
+        <label>Current</label>
+        <input type="number" id="ng-current" placeholder="optional" style="width:80px;" />
+      </div>
+      <div class="field">
+        <label>Target</label>
+        <input type="number" id="ng-target" placeholder="optional" style="width:80px;" />
+      </div>
+      <div class="field">
+        <label>Unit</label>
+        <input type="text" id="ng-unit" placeholder="e.g. followers" style="width:100px;" />
+      </div>
+    </div>
+    <div class="fields">
+      <div class="field">
+        <label>Target date</label>
+        <input type="date" id="ng-date" onclick="this.showPicker && this.showPicker()" />
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn" onclick="saveNewGoal()">Add</button>
+      <button class="btn-ghost" onclick="cancelAddGoal()">Cancel</button>
+    </div>
+  </div>`;
+}
+
+function renderGoals(){
+  const goalsEl = document.getElementById("goals");
+  const sorted = [...goals].sort((a,b) => (a.status!=='active') - (b.status!=='active')
+    || (a.target_date||'9999-99-99').localeCompare(b.target_date||'9999-99-99'));
+  const shown = goalsExpanded ? sorted : sorted.slice(0, GOALS_CAP);
+  const hiddenCount = sorted.length - shown.length;
+
+  document.getElementById("goals-count").textContent = sorted.length
+    ? (hiddenCount > 0 ? `${shown.length} of ${sorted.length}` : `${sorted.length}`)
+    : '';
+
+  goalsEl.innerHTML = shown.map(g => editingGoalId === g.id ? goalEditFormHtml(g) : goalRowHtml(g)).join('')
+    + (hiddenCount > 0 ? `<button class="add-row-btn" onclick="toggleGoalsExpanded()">Show ${hiddenCount} more</button>` : "")
+    + (goalsExpanded && sorted.length > GOALS_CAP ? `<button class="add-row-btn" onclick="toggleGoalsExpanded()">Show fewer</button>` : "")
+    + addGoalFormHtml();
+}
+
+function toggleGoalsExpanded(){
+  goalsExpanded = !goalsExpanded;
+  renderGoals();
+}
+
+function startEditGoal(id){
+  editingGoalId = id;
+  addingGoal = false;
+  renderGoals();
+}
+
+function cancelEditGoal(){
+  editingGoalId = null;
+  renderGoals();
+}
+
+async function saveGoalEdit(id){
+  const description = document.getElementById(`ef-gdesc-${id}`).value.trim();
+  if (!description) { alert('Description cannot be empty'); return; }
+  const project_id = document.getElementById(`ef-gproject-${id}`).value || null;
+  const current_value = document.getElementById(`ef-gcurrent-${id}`).value;
+  const target_value = document.getElementById(`ef-gtarget-${id}`).value;
+  const unit = document.getElementById(`ef-gunit-${id}`).value.trim() || null;
+  const target_date = document.getElementById(`ef-gdate-${id}`).value || null;
+  const status = document.getElementById(`ef-gstatus-${id}`).value;
+  try{
+    const { error } = await client.from('goals').update({
+      description, project_id,
+      current_value: current_value === '' ? null : parseFloat(current_value),
+      target_value: target_value === '' ? null : parseFloat(target_value),
+      unit, target_date, status
+    }).eq('id', id);
+    if (error) throw error;
+    editingGoalId = null;
+    await loadData();
+  } catch(err){
+    alert('Could not save goal: ' + (err.message || err));
+  }
+}
+
+function startAddGoal(){
+  addingGoal = true;
+  editingGoalId = null;
+  renderGoals();
+}
+
+function cancelAddGoal(){
+  addingGoal = false;
+  renderGoals();
+}
+
+async function saveNewGoal(){
+  const description = document.getElementById('ng-desc').value.trim();
+  if (!description) return;
+  const project_id = document.getElementById('ng-project').value || null;
+  const current_value = document.getElementById('ng-current').value;
+  const target_value = document.getElementById('ng-target').value;
+  const unit = document.getElementById('ng-unit').value.trim() || null;
+  const target_date = document.getElementById('ng-date').value || null;
+  try{
+    const { error } = await client.from('goals').insert({
+      description, project_id,
+      current_value: current_value === '' ? null : parseFloat(current_value),
+      target_value: target_value === '' ? null : parseFloat(target_value),
+      unit, target_date
+    });
+    if (error) throw error;
+    addingGoal = false;
+    await loadData();
+  } catch(err){
+    alert('Could not add goal: ' + (err.message || err));
+  }
+}
+
+function habitProgress(rt){
+  // Fraction of this recurring habit's scheduled occurrences, from this Monday
+  // through today, that are marked done — powers the ring on the Habits card.
+  const now = new Date();
+  const day = now.getDay(); // 0=Sun..6=Sat
+  const diffToMonday = (day === 0 ? -6 : 1 - day);
+  const monday = new Date(now); monday.setDate(now.getDate() + diffToMonday); monday.setHours(0,0,0,0);
+  const todayStr = localDateStr(now);
+  let total = 0, done = 0;
+  for (let i=0; i<7; i++){
+    const d = new Date(monday); d.setDate(monday.getDate() + i);
+    const dstr = localDateStr(d);
+    if (dstr > todayStr) continue;
+    if (!(rt.weekdays || []).includes(d.getDay())) continue;
+    total++;
+    const notes = `recur:${rt.id}:${dstr}`;
+    const t = tasks.find(x => x.notes === notes);
+    if (t && t.status === 'done') done++;
+  }
+  return { done, total };
+}
+
+function ringSvg(pct, color){
+  const r = 19, c = 2 * Math.PI * r;
+  const offset = c * (1 - pct / 100);
+  return `
+  <svg width="48" height="48" viewBox="0 0 48 48">
+    <circle cx="24" cy="24" r="${r}" fill="none" stroke="var(--hairline)" stroke-width="4"/>
+    <circle cx="24" cy="24" r="${r}" fill="none" stroke="${color}" stroke-width="4"
+      stroke-dasharray="${c}" stroke-dashoffset="${offset}" stroke-linecap="round"
+      transform="rotate(-90 24 24)"/>
+  </svg>`;
+}
+
+function habitCardHtml(label, done, total, color){
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  return `
+  <div class="habit-card">
+    <div class="habit-ring">${ringSvg(pct, color)}<div class="habit-ring-label">${done}/${total}</div></div>
+    <div class="habit-name">${escapeHtml(label)}</div>
+  </div>`;
+}
+
+// ---------------------------------------------------------------------
+// Claude usage (weekly limit resets Saturday 8:00pm local — see
+// CLAUDE_USAGE_RESET_DOW/HOUR above). Folded into the Habits ring row
+// rather than its own chart section (2026-07-30) — see the pace-colored
+// ring design below.
+// ---------------------------------------------------------------------
+let loggingClaudeUsage = false;
+
+// Returns the current reset-week window as {start, end} Dates, where start
+// is the most recent Saturday 8:00pm at-or-before `now` and end is 7 days
+// later (the next reset).
+function claudeUsageWeekWindow(now = new Date()){
+  const d = new Date(now);
+  const daysSinceReset = (d.getDay() - CLAUDE_USAGE_RESET_DOW + 7) % 7;
+  const start = new Date(d.getFullYear(), d.getMonth(), d.getDate() - daysSinceReset, CLAUDE_USAGE_RESET_HOUR, 0, 0, 0);
+  if (start > d) start.setDate(start.getDate() - 7);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 7);
+  return { start, end };
+}
+
+function claudeUsageStats(){
+  const { start, end } = claudeUsageWeekWindow();
+  const rows = metrics
+    .filter(m => m.metric_name === 'claude_usage_weekly')
+    .map(m => ({ t: new Date(m.recorded_at).getTime(), v: Number(m.value) }))
+    .filter(p => p.t >= start.getTime() && p.t < end.getTime())
+    .sort((a,b) => a.t - b.t);
+  const latest = rows[rows.length - 1];
+  const now = new Date();
+  const elapsedFrac = Math.max(0, Math.min(1, (now.getTime() - start.getTime()) / (end.getTime() - start.getTime())));
+  return { latest, expectedPct: elapsedFrac * 100 };
+}
+
+// Green the further under pace, red the further over, gray near zero —
+// a speed-up/slow-down signal rather than a plain done/total ring.
+// Anchors reuse the existing --green/--ash/--coral tokens; relative pace
+// is clamped to +-50% for color only (the label still shows the real
+// number) so one noisy early-week reading can't blow out the scale.
+function paceColor(relPct){
+  const GREEN = [95, 191, 143], GRAY = [144, 150, 160], RED = [226, 114, 90];
+  const clamped = Math.max(-50, Math.min(50, relPct));
+  const t = Math.abs(clamped) / 50;
+  const from = clamped <= 0 ? GREEN : GRAY;
+  const to = clamped <= 0 ? GRAY : RED;
+  const rgb = from.map((v, i) => Math.round(v + (to[i] - v) * t));
+  return `rgb(${rgb.join(',')})`;
+}
+
+function usageRingCardHtml(){
+  const { latest, expectedPct } = claudeUsageStats();
+  const actualPct = latest ? Math.max(0, Math.min(100, latest.v)) : 0;
+  const r = 19, c = 2 * Math.PI * r;
+  const offset = c * (1 - actualPct / 100);
+  let color = 'var(--ash)', label = 'no data', fontSize = '7.5px';
+  if (latest && expectedPct > 0.5){
+    const relPct = ((latest.v - expectedPct) / expectedPct) * 100;
+    const onPace = Math.abs(relPct) < 5;
+    color = paceColor(relPct);
+    label = onPace ? 'on pace' : (relPct > 0 ? '+' : '') + Math.round(relPct) + '%';
+    fontSize = onPace ? '8px' : '9.5px';
+  }
+  return `
+  <div class="habit-card clickable" onclick="startLogClaudeUsage()" title="Log a new Claude usage reading">
+    <div class="habit-ring">
+      <svg width="48" height="48" viewBox="0 0 48 48">
+        <circle cx="24" cy="24" r="${r}" fill="none" stroke="var(--hairline)" stroke-width="4"/>
+        <circle cx="24" cy="24" r="${r}" fill="none" stroke="${color}" stroke-width="4"
+          stroke-dasharray="${c}" stroke-dashoffset="${offset}" stroke-linecap="round"
+          transform="rotate(-90 24 24)"/>
+      </svg>
+      <div class="habit-ring-label" style="font-size:${fontSize};">${label}</div>
+    </div>
+    <div class="habit-name">Claude Usage</div>
+  </div>`;
+}
+
+function startLogClaudeUsage(){
+  loggingClaudeUsage = true;
+  renderHabits();
+  document.getElementById('cu-log-input')?.focus();
+}
+
+function cancelLogClaudeUsage(){
+  loggingClaudeUsage = false;
+  renderHabits();
+}
+
+async function logClaudeUsage(){
+  const input = document.getElementById('cu-log-input');
+  const value = parseFloat(input.value);
+  if (isNaN(value)) return;
+  try{
+    const { error } = await client.from('metrics').insert({ metric_name: 'claude_usage_weekly', value, unit: '%' });
+    if (error) throw error;
+    loggingClaudeUsage = false;
+    await loadData();
+  } catch(err){
+    alert('Could not log Claude usage: ' + (err.message || err));
+  }
+}
+
+function renderHabits(){
+  const el = document.getElementById("habits");
+  if (!el) return;
+  const habits = recurringTasks.filter(rt => rt.active && rt.frequency === 'weekly' && !rt.chained);
+  const cards = [];
+  const grouped = new Set();
+  for (const group of HABIT_GROUPS){
+    const members = habits.filter(rt => group.match(rt.description));
+    if (!members.length) continue;
+    members.forEach(rt => grouped.add(rt.id));
+    const totals = members.reduce((acc, rt) => {
+      const { done, total } = habitProgress(rt);
+      return { done: acc.done + done, total: acc.total + total };
+    }, { done: 0, total: 0 });
+    const project = projectFor(members[0].project_id);
+    const color = project ? project.color : 'var(--signal)';
+    cards.push(habitCardHtml(group.label, totals.done, totals.total, color));
+  }
+  for (const rt of habits){
+    if (grouped.has(rt.id)) continue;
+    const { done, total } = habitProgress(rt);
+    const project = projectFor(rt.project_id);
+    const color = project ? project.color : 'var(--signal)';
+    cards.push(habitCardHtml(rt.description, done, total, color));
+  }
+  cards.push(usageRingCardHtml());
+
+  const logRowHtml = loggingClaudeUsage
+    ? `<div class="usage-chart-log" style="flex-basis:100%;">
+         <input type="number" step="any" id="cu-log-input" placeholder="new Claude usage %" style="width:140px;" />
+         <button class="icon-btn" title="Save" onclick="logClaudeUsage()">&#10003;</button>
+         <button class="icon-btn" title="Cancel" onclick="cancelLogClaudeUsage()">&#10005;</button>
+       </div>`
+    : '';
+
+  el.innerHTML = cards.join('') + logRowHtml;
+}
+
+const LIST_LABELS = { buy: 'Want to Buy', watch: 'Watch List' };
+
+// Lists start collapsed (just the header + count) — clicking the header
+// reveals the items. Per-list_name, so each list's open/closed state is
+// independent and persists across re-renders within the session (module-level,
+// not saved to the DB — resets to collapsed on a fresh page load).
+let expandedLists = new Set();
+let addingList = false;
+
+// list_name is free text (per the list_items convention in CLAUDE.md), so
+// unlike every other onclick(...) in this file — which only ever embeds a
+// uuid — this one can carry quotes/HTML. jsArg() makes it safe to splice into
+// an inline handler: JSON.stringify produces a correctly-escaped JS string
+// literal, then escapeAttr() HTML-escapes that for use inside the (double-
+// quoted) onclick attribute itself.
+function escapeAttr(str){
+  return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function jsArg(value){
+  return escapeAttr(JSON.stringify(value));
+}
+
+function toggleListExpanded(name){
+  if (expandedLists.has(name)) expandedLists.delete(name);
+  else expandedLists.add(name);
+  renderLists();
+}
+
+// Single in-place editor at a time, same idea as editingTaskId but scoped to
+// this file's simpler needs (just a title, no modal) — the row itself swaps
+// to an input rather than opening the shared task/project/goal edit modal.
+let editingListItemId = null;
+
+function startEditListItem(id){
+  editingListItemId = id;
+  renderLists();
+  document.querySelector('.list-item-edit-input')?.focus();
+}
+
+function cancelEditListItem(){
+  editingListItemId = null;
+  renderLists();
+}
+
+async function saveListItemEdit(id, inputEl){
+  const title = inputEl.value.trim();
+  if (!title) return;
+  try{
+    const { error } = await client.from('list_items').update({ title }).eq('id', id);
+    if (error) throw error;
+    const item = listItems.find(i => i.id === id);
+    if (item) item.title = title;
+    editingListItemId = null;
+    renderLists();
+  } catch(err){
+    alert('Could not update item: ' + (err.message || err));
+  }
+}
+
+function listItemRowHtml(item){
+  const done = item.status === 'done';
+  if (item.id === editingListItemId){
+    return `
+    <div class="row">
+      <input type="text" class="list-item-edit-input" value="${escapeAttr(item.title)}"
+        onkeydown="if(event.key==='Enter'){saveListItemEdit('${item.id}', this)} if(event.key==='Escape'){cancelEditListItem()}" />
+      <button class="icon-btn" title="Save" onclick="saveListItemEdit('${item.id}', this.previousElementSibling)">&#10003;</button>
+      <button class="icon-btn" title="Cancel" onclick="cancelEditListItem()">&#10005;</button>
+    </div>`;
+  }
+  return `
+    <div class="row ${done ? 'done' : ''}" draggable="${done ? 'false' : 'true'}" data-item-id="${item.id}">
+      <span class="drag-handle" title="Drag to reorder">&#8942;&#8942;</span>
+      <input type="checkbox" class="chk" ${done ? 'checked' : ''}
+        title="Mark done" onchange="toggleListItemDone('${item.id}', this)" />
+      <span class="desc">${escapeHtml(item.title)}</span>
+      <button class="icon-btn" title="Edit" onclick="startEditListItem('${item.id}')">&#9998;</button>
+    </div>`;
+}
+
+// Which list_name (if any) is currently showing its delete-confirm card in
+// place of its normal header/items — an in-card confirmation rather than a
+// native confirm() popup, so it stays visually consistent
+// with the rest of the panel styling. Only one at a time.
+let confirmingDeleteList = null;
+
+function renderLists(){
+  const el = document.getElementById("lists");
+  if (!el) return;
+  const names = [...new Set(listItems.map(i => i.list_name))].sort();
+  el.innerHTML = names.map(name => {
+    if (confirmingDeleteList === name) return listDeleteConfirmCardHtml(name);
+    const items = listItems.filter(i => i.list_name === name)
+      .sort((a,b) => (a.status==='done') - (b.status==='done') || a.priority - b.priority);
+    const expanded = expandedLists.has(name);
+    const openCount = items.filter(i => i.status !== 'done').length;
+    return `
+    <div class="panel list-panel ${expanded ? 'expanded-panel' : ''}">
+      <button class="list-delete-btn" title="Delete list" onclick="startDeleteList(${jsArg(name)})">&#10005;</button>
+      <div class="mod-label list-panel-header ${expanded ? 'expanded' : ''}" onclick="toggleListExpanded(${jsArg(name)})">
+        <span class="chevron">&#9656;</span>
+        <span>${escapeHtml(LIST_LABELS[name] || name)}</span>
+        ${expanded ? `<span class="header-right"><span class="count">${openCount} open</span></span>` : ''}
+      </div>
+      <div class="list-collapse ${expanded ? 'expanded' : ''}">
+        <div class="list" data-list-name="${escapeAttr(name)}">
+          ${items.map(listItemRowHtml).join('')}
+          <div class="add-row list-item-add-row">
+            <input type="text" placeholder="Add item..." onkeydown="if(event.key==='Enter'){addListItemFromRow(this)}" />
+            <button class="btn" onclick="addListItemFromRow(this)">Add</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('') + addListCardHtml();
+  initListDragReorder();
+}
+
+function listDeleteConfirmCardHtml(name){
+  const count = listItems.filter(i => i.list_name === name).length;
+  const label = LIST_LABELS[name] || name;
+  return `
+  <div class="panel list-panel expanded-panel list-confirm-card">
+    <div class="mod-label">Delete "${escapeHtml(label)}"?</div>
+    <div class="confirm-copy">Removes all ${count} item${count === 1 ? '' : 's'} permanently. This can't be undone.</div>
+    <div class="form-actions">
+      <button class="btn-danger" onclick="confirmDeleteList(${jsArg(name)})">Delete</button>
+      <button class="btn-ghost" onclick="cancelDeleteList()">Cancel</button>
+    </div>
+  </div>`;
+}
+
+function startDeleteList(name){
+  confirmingDeleteList = name;
+  renderLists();
+}
+
+function cancelDeleteList(){
+  confirmingDeleteList = null;
+  renderLists();
+}
+
+async function confirmDeleteList(name){
+  try{
+    const { error } = await client.from('list_items').delete().eq('list_name', name);
+    if (error) throw error;
+    listItems = listItems.filter(i => i.list_name !== name);
+    expandedLists.delete(name);
+    confirmingDeleteList = null;
+    renderLists();
+  } catch(err){
+    alert('Could not delete list: ' + (err.message || err));
+  }
+}
+
+function addListCardHtml(){
+  if (!addingList){
+    return `<div class="panel list-panel list-add-card"><button class="add-row-btn" style="border-top:none;" onclick="startAddList()">+ Add list</button></div>`;
+  }
+  return `
+  <div class="panel list-panel expanded-panel list-add-card">
+    <div class="mod-label">New list</div>
+    <div class="add-row" style="flex-direction:column;align-items:stretch;">
+      <input type="text" id="new-list-name" placeholder="List name (e.g. Gift Ideas)" />
+      <input type="text" id="new-list-first-item" placeholder="First item..." />
+    </div>
+    <div class="form-actions" style="margin-top:10px;">
+      <button class="btn" onclick="saveNewList()">Add</button>
+      <button class="btn-ghost" onclick="cancelAddList()">Cancel</button>
+    </div>
+  </div>`;
+}
+
+function startAddList(){
+  addingList = true;
+  renderLists();
+  document.getElementById('new-list-name')?.focus();
+}
+
+function cancelAddList(){
+  addingList = false;
+  renderLists();
+}
+
+async function saveNewList(){
+  const nameInput = document.getElementById('new-list-name');
+  const itemInput = document.getElementById('new-list-first-item');
+  const list_name = nameInput.value.trim();
+  const title = itemInput.value.trim();
+  if (!list_name || !title){
+    alert('Enter both a list name and a first item.');
+    return;
+  }
+  try{
+    const { data, error } = await client.from('list_items')
+      .insert({ list_name, title, status: 'open', priority: 10 }).select();
+    if (error) throw error;
+    listItems.push(data[0]);
+    expandedLists.add(list_name);
+    addingList = false;
+    renderLists();
+  } catch(err){
+    alert('Could not add list: ' + (err.message || err));
+  }
+}
+
+async function addListItem(name, inputEl){
+  const title = inputEl.value.trim();
+  if (!title) return;
+  const maxPriority = listItems.filter(i => i.list_name === name).reduce((m,i) => Math.max(m, i.priority || 0), 0);
+  try{
+    const { data, error } = await client.from('list_items')
+      .insert({ list_name: name, title, status: 'open', priority: maxPriority + 10 }).select();
+    if (error) throw error;
+    listItems.push(data[0]);
+    inputEl.value = '';
+    renderLists();
+  } catch(err){
+    alert('Could not add item: ' + (err.message || err));
+  }
+}
+
+function addListItemFromRow(el){
+  const row = el.closest('.list-item-add-row');
+  const input = row.querySelector('input[type=text]');
+  const name = row.closest('.list').dataset.listName;
+  addListItem(name, input);
+}
+
+async function toggleListItemDone(id, checkboxEl){
+  const checked = checkboxEl.checked;
+  if (checked) celebrateCheck(checkboxEl);
+  const newStatus = checked ? 'done' : 'open';
+  try{
+    const { error } = await client.from('list_items').update({ status: newStatus }).eq('id', id);
+    if (error) throw error;
+    const item = listItems.find(i => i.id === id);
+    if (item) item.status = newStatus;
+    renderLists();
+  } catch(err){
+    checkboxEl.checked = !checked;
+    alert('Could not update list item: ' + (err.message || err));
+  }
+}
+
+// ---------------------------------------------------------------------
+// Drag-to-reorder within a single list_items list (each list-panel's `.list`
+// container is its own drop zone, scoped by data-list-name so dragging never
+// crosses between e.g. "buy" and "watch"). Unlike task drag-reorder (which
+// nudges `priority` to match a neighbor, since priority there carries the
+// 1-5 rubric meaning), list_items.priority has no such rubric attached to it
+// — it exists purely to hold manual order — so a drop just rewrites every
+// item in that list to a fresh sequential priority (10, 20, 30, ...) matching
+// the new on-screen order. Small lists, so a full rewrite per drop is cheap
+// and simpler than fractional-index math.
+// ---------------------------------------------------------------------
+let dragListItemId = null;
+
+function clearListDropMarkers(container){
+  container.querySelectorAll('.drop-before,.drop-after').forEach(r => r.classList.remove('drop-before','drop-after'));
+}
+
+function onListItemDragStart(e){
+  const row = e.target.closest('.row[draggable="true"]');
+  if (!row) return;
+  dragListItemId = row.dataset.itemId;
+  row.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', dragListItemId);
+}
+
+function onListItemDragOver(e){
+  if (!dragListItemId) return;
+  e.preventDefault();
+  const container = e.currentTarget;
+  const row = e.target.closest('.row[draggable="true"]');
+  clearListDropMarkers(container);
+  if (!row || row.dataset.itemId === dragListItemId) return;
+  const rect = row.getBoundingClientRect();
+  row.classList.add((e.clientY - rect.top) < rect.height / 2 ? 'drop-before' : 'drop-after');
+}
+
+function onListItemDragEnd(){
+  document.querySelectorAll('.row.dragging').forEach(r => r.classList.remove('dragging'));
+  document.querySelectorAll('.list[data-list-name]').forEach(clearListDropMarkers);
+  dragListItemId = null;
+}
+
+async function onListItemDrop(e){
+  e.preventDefault();
+  const container = e.currentTarget;
+  const row = e.target.closest('.row[draggable="true"]');
+  const itemId = dragListItemId;
+  clearListDropMarkers(container);
+  document.querySelectorAll('.row.dragging').forEach(r => r.classList.remove('dragging'));
+  dragListItemId = null;
+  if (!itemId || !row || row.dataset.itemId === itemId) return;
+
+  const rows = Array.from(container.querySelectorAll('.row[draggable="true"]'));
+  const draggedRow = rows.find(r => r.dataset.itemId === itemId);
+  if (!draggedRow) return;
+  const others = rows.filter(r => r.dataset.itemId !== itemId);
+
+  const rect = row.getBoundingClientRect();
+  const before = (e.clientY - rect.top) < rect.height / 2;
+  const targetIndex = others.indexOf(row);
+  const insertIndex = before ? targetIndex : targetIndex + 1;
+  others.splice(insertIndex, 0, draggedRow);
+  const orderedIds = others.map(r => r.dataset.itemId);
+
+  try{
+    await Promise.all(orderedIds.map((id, i) => {
+      const priority = (i + 1) * 10;
+      const item = listItems.find(x => x.id === id);
+      if (item) item.priority = priority;
+      return client.from('list_items').update({ priority }).eq('id', id);
+    }));
+    renderLists();
+  } catch(err){
+    alert('Could not reorder list item: ' + (err.message || err));
+  }
+}
+
+function initListDragReorder(){
+  document.querySelectorAll('.list[data-list-name]').forEach(el => {
+    el.addEventListener('dragstart', onListItemDragStart);
+    el.addEventListener('dragover', onListItemDragOver);
+    el.addEventListener('drop', onListItemDrop);
+    el.addEventListener('dragend', onListItemDragEnd);
+  });
+}
+
+function renderTaskEditForm(t, siblingTasks){
+  const blockedOptions = siblingTasks.filter(s => s.id !== t.id);
+  return `
+  <div class="modal-head">
+    <div class="modal-title">Edit Task</div>
+    <button class="icon-btn" title="Close" onclick="closeModal()">&#10005;</button>
+  </div>
+  <div class="row-edit" style="padding:0;border-top:none;">
+    <div class="fields">
+      <div class="field" style="flex:1 1 100%;">
+        <label>Description</label>
+        <input type="text" id="ef-desc-${t.id}" value="${escapeHtml(t.description)}" />
+      </div>
+      <div class="field" style="flex:1 1 100%;">
+        <label>Detail</label>
+        <textarea id="ef-detail-${t.id}" placeholder="Optional — context, links, a checklist&hellip;">${escapeHtml(t.detail || '')}</textarea>
+      </div>
+    </div>
+    <div class="fields">
+      <div class="field">
+        <label>Due date</label>
+        <input type="date" id="ef-due-${t.id}" value="${t.due_date || ''}" onclick="this.showPicker && this.showPicker()" />
+      </div>
+      <div class="field">
+        <label>Due time</label>
+        <input type="time" id="ef-duetime-${t.id}" value="${t.due_time ? t.due_time.slice(0,5) : ''}" onclick="this.showPicker && this.showPicker()" />
+      </div>
+      <div class="field">
+        <label>Priority</label>
+        <select id="ef-priority-${t.id}">
+          ${[1,2,3,4,5].map(n => `<option value="${n}" ${n===t.priority?'selected':''}>${n}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field">
+        <label>Status</label>
+        <select id="ef-status-${t.id}">
+          ${['open','doing','blocked','done'].map(s => `<option value="${s}" ${s===t.status?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field">
+        <label>Not before</label>
+        <input type="date" id="ef-notbefore-${t.id}" value="${t.not_before || ''}" onclick="this.showPicker && this.showPicker()" />
+      </div>
+      <div class="field">
+        <label>Estimate</label>
+        <select id="ef-estimate-${t.id}">
+          <option value="">— unset —</option>
+          ${[15,30,60,120,240].map(m => `<option value="${m}" ${m===t.estimate_minutes?'selected':''}>${estimateLabel(m)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field" style="flex:1;">
+        <label>Blocked by</label>
+        <select id="ef-blockedby-${t.id}">
+          <option value="">— none —</option>
+          ${blockedOptions.map(s => `<option value="${s.id}" ${s.id===t.blocked_by?'selected':''}>${escapeHtml(s.description)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field" style="flex-basis:100%;">
+        <label style="display:flex;align-items:center;gap:6px;font-weight:400;">
+          <input type="checkbox" id="ef-isevent-${t.id}" ${t.is_event ? 'checked' : ''} style="width:auto;" />
+          Calendar event (fixed time, eg. reservation, appointment)
+        </label>
+      </div>
+      ${dateRefHelperHtml(`ef-due-${t.id}`)}
+    </div>
+    <div class="form-actions">
+      <button class="btn" onclick="saveTaskEdit('${t.id}')">Save</button>
+      <button class="btn-ghost" onclick="cancelEditTask()">Cancel</button>
+    </div>
+  </div>`;
+}
+
+function startEditTask(id){
+  editingTaskId = id;
+  renderModal();
+}
+
+function cancelEditTask(){
+  editingTaskId = null;
+  renderModal();
+}
+
+async function saveTaskEdit(id){
+  const description = document.getElementById(`ef-desc-${id}`).value.trim();
+  if (!description) { alert('Description cannot be empty'); return; }
+  const detail = document.getElementById(`ef-detail-${id}`).value.trim() || null;
+  const due_date = document.getElementById(`ef-due-${id}`).value || null;
+  const due_time = document.getElementById(`ef-duetime-${id}`).value || null;
+  const priority = parseInt(document.getElementById(`ef-priority-${id}`).value, 10);
+  const status = document.getElementById(`ef-status-${id}`).value;
+  const not_before = document.getElementById(`ef-notbefore-${id}`).value || null;
+  const estimateRaw = document.getElementById(`ef-estimate-${id}`).value;
+  const estimate_minutes = estimateRaw ? parseInt(estimateRaw, 10) : null;
+  const blocked_by = document.getElementById(`ef-blockedby-${id}`).value || null;
+  const is_event = document.getElementById(`ef-isevent-${id}`).checked;
+  if (is_event && !due_date) { alert('A calendar event needs a due date'); return; }
+  try{
+    const { error } = await client.from('tasks').update({ description, detail, due_date, due_time, priority, status, not_before, estimate_minutes, blocked_by, is_event }).eq('id', id);
+    if (error) throw error;
+    editingTaskId = null;
+    await loadData();
+  } catch(err){
+    alert('Could not save task: ' + (err.message || err));
+  }
+}
+
+function renderProjectEditForm(p){
+  return `
+  <div class="modal-head">
+    <div class="modal-title">
+      <span class="dot-orb" style="--c:${p.color}"></span>
+      Edit ${escapeHtml(p.name)}
+    </div>
+    <button class="icon-btn" title="Close" onclick="closeModal()">&#10005;</button>
+  </div>
+  <div class="row-edit" style="padding:0;border-top:none;">
+    <div class="fields">
+      <div class="field">
+        <label>Status</label>
+        <select id="ef-pstatus-${p.id}">
+          ${['active','paused','done'].map(s => `<option value="${s}" ${s===p.status?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field">
+        <label>Priority</label>
+        <select id="ef-ppriority-${p.id}">
+          ${[1,2,3,4,5].map(n => `<option value="${n}" ${n===p.priority?'selected':''}>${n}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field">
+        <label>Next deadline</label>
+        <input type="date" id="ef-pdeadline-${p.id}" value="${p.next_deadline || ''}" onclick="this.showPicker && this.showPicker()" />
+      </div>
+    </div>
+    <div class="fields">
+      <div class="field" style="flex:1;">
+        <label>Blocker</label>
+        <input type="text" id="ef-pblocker-${p.id}" value="${escapeHtml(p.blocker || '')}" placeholder="No current blocker" />
+      </div>
+    </div>
+    <div class="fields">
+      <div class="field" style="flex:1;">
+        <label>Notes (short summary, shown on the card)</label>
+        <textarea id="ef-pnotes-${p.id}" oninput="autoGrowTextarea(this)">${escapeHtml(p.notes || '')}</textarea>
+      </div>
+    </div>
+    <div class="fields">
+      <div class="field" style="flex:1;">
+        <label>Detail (long-form, never shown on the card)</label>
+        <textarea id="ef-pdetail-${p.id}" oninput="autoGrowTextarea(this)" placeholder="Optional — context, history, links&hellip;">${escapeHtml(p.detail || '')}</textarea>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn" onclick="saveProjectEdit('${p.id}')">Save</button>
+      <button class="btn-ghost" onclick="cancelEditProject()">Cancel</button>
+    </div>
+  </div>`;
+}
+
+function startEditProject(id){
+  editingProjectId = id;
+  renderModal();
+  setTimeout(() => {
+    autoGrowTextarea(document.getElementById(`ef-pnotes-${id}`));
+    autoGrowTextarea(document.getElementById(`ef-pdetail-${id}`));
+  }, 0);
+}
+
+function cancelEditProject(){
+  editingProjectId = null;
+  renderModal();
+}
+
+async function saveProjectEdit(id){
+  const status = document.getElementById(`ef-pstatus-${id}`).value;
+  const priority = parseInt(document.getElementById(`ef-ppriority-${id}`).value, 10);
+  const next_deadline = document.getElementById(`ef-pdeadline-${id}`).value || null;
+  const blocker = document.getElementById(`ef-pblocker-${id}`).value.trim() || null;
+  const notes = document.getElementById(`ef-pnotes-${id}`).value.trim() || null;
+  const detail = document.getElementById(`ef-pdetail-${id}`).value.trim() || null;
+  try{
+    const { error } = await client.from('projects').update({ status, priority, next_deadline, blocker, notes, detail }).eq('id', id);
+    if (error) throw error;
+    editingProjectId = null;
+    await loadData();
+  } catch(err){
+    alert('Could not save project: ' + (err.message || err));
+  }
+}
+
+function localDateStr(d = new Date()){
+  // "Today" must be computed from local calendar date, not toISOString() (which is
+  // UTC) — anyone west of UTC rolls over to "tomorrow" every evening otherwise.
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+function autoGrowTextarea(el){
+  if (!el) return;
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+}
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.innerText = str ?? '';
+  return d.innerHTML;
+}
+function formatDate(d){
+  const dt = new Date(d + "T00:00:00");
+  return dt.toLocaleDateString(undefined, { month:'short', day:'numeric' });
+}
+function daysUntil(d){
+  const todayStr = localDateStr();
+  const today = new Date(todayStr + "T00:00:00");
+  const target = new Date(d + "T00:00:00");
+  return Math.round((target - today) / 86400000);
+}
+function addDaysToDateStr(dateStr, days){
+  const dt = new Date(dateStr + "T00:00:00");
+  dt.setDate(dt.getDate() + days);
+  return localDateStr(dt);
+}
+function countdownBadge(d){
+  const n = daysUntil(d);
+  if (n < 0) return `<span class="countdown-badge past">${Math.abs(n)}d ago</span>`;
+  if (n === 0) return `<span class="countdown-badge today">today</span>`;
+  return `<span class="countdown-badge">${n}d</span>`;
+}
+function greetingText(){
+  const h = new Date().getHours();
+  const g = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+  return `${g}, <em>${USER_NAME}</em>.`;
+}
+function clockText(){
+  const now = new Date();
+  const dateFmt = now.toLocaleDateString(undefined, { weekday:'long', month:'long', day:'numeric' });
+  const timeFmt = now.toLocaleTimeString(undefined, { hour:'numeric', minute:'2-digit' });
+  return `${dateFmt} &middot; ${timeFmt}`;
+}
+function tickClock(){
+  const clockEl = document.getElementById('clock');
+  if (clockEl) clockEl.innerHTML = clockText();
+}
+function formatTime(t){
+  // t is "HH:MM:SS" from Postgres time
+  const [h, m] = t.split(':').map(Number);
+  const dt = new Date(2000, 0, 1, h, m);
+  return dt.toLocaleTimeString(undefined, { hour:'numeric', minute:'2-digit' });
+}
+
+function isEditingSomething(){
+  return !!(editingTaskId || editingProjectId || editingGoalId || openTasksProjectId || searchOpen || quickAddParsed);
+}
+
+async function loadData(){
+  if (isEditingSomething()) return; // don't blow away in-progress edits with the 60s auto-refresh
+  try{
+    const [{ data: p, error: pErr }, { data: t, error: tErr }, { data: g, error: gErr }, { data: m, error: mErr }, { data: rt, error: rtErr }, { data: li, error: liErr }] = await Promise.all([
+      client.from('projects').select('*').order('priority', { ascending:true }),
+      client.from('tasks').select('*'),
+      client.from('goals').select('*'),
+      client.from('metrics').select('*'),
+      client.from('recurring_tasks').select('*'),
+      client.from('list_items').select('*')
+    ]);
+    if (pErr) throw pErr;
+    if (tErr) throw tErr;
+    if (gErr) throw gErr;
+    if (mErr) throw mErr;
+    if (rtErr) throw rtErr;
+    if (liErr) throw liErr;
+    projects = p || [];
+    tasks = t || [];
+    goals = g || [];
+    metrics = m || [];
+    recurringTasks = rt || [];
+    listItems = li || [];
+    render();
+  } catch(err){
+    console.error('Load failed', err);
+    app.innerHTML = `<div class="config-warning">Couldn't load data: ${escapeHtml(err.message || String(err))}.
+      Check your Supabase URL/key and that the schema has been run.</div>`;
+  }
+}
+
+async function addTask(projectId){
+  const input = document.getElementById(`new-task-${projectId}`);
+  const dateInput = document.getElementById(`new-task-date-${projectId}`);
+  const timeInput = document.getElementById(`new-task-time-${projectId}`);
+  const description = input.value.trim();
+  if (!description) return;
+  try{
+    const { error } = await client.from('tasks').insert({
+      project_id: projectId,
+      description,
+      due_date: dateInput.value || null,
+      due_time: timeInput.value || null
+    });
+    if (error) throw error;
+    await loadData();
+  } catch(err){
+    alert('Could not add task: ' + (err.message || err));
+  }
+}
+
+async function submitQuickAdd(){
+  const input = document.getElementById('quick-add-input');
+  const text = (input.value || '').trim();
+  if (!text || quickAddLoading) return;
+  quickAddLoading = true;
+  quickAddError = null;
+  renderQuickAddBar();
+  try{
+    const resp = await fetch('/parse-task', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        text,
+        today: localDateStr(),
+        projects: projects.filter(p => p.status !== 'done').map(p => ({ id: p.id, name: p.name })),
+      }),
+    });
+    const data = await resp.json();
+    if (!resp.ok || data.error) throw new Error(data.error || `HTTP ${resp.status}`);
+    quickAddParsed = { text, ...data.parsed };
+    input.value = '';
+  } catch(err){
+    quickAddError = err.message || String(err);
+  } finally {
+    quickAddLoading = false;
+    renderQuickAddBar();
+    renderModal();
+  }
+}
+
+function renderQuickAddBar(){
+  const btn = document.getElementById('quick-add-btn');
+  const input = document.getElementById('quick-add-input');
+  const status = document.getElementById('quick-add-status');
+  if (!btn || !input || !status) return;
+  btn.disabled = quickAddLoading;
+  btn.textContent = quickAddLoading ? 'Parsing…' : 'Add';
+  input.disabled = quickAddLoading;
+  status.innerHTML = quickAddError ? `<span class="qa-error">${escapeHtml(quickAddError)}</span>` : '';
+}
+
+function renderQuickAddConfirm(qa){
+  const projectOptions = projects.filter(p => p.status !== 'done').sort((a,b) => a.name.localeCompare(b.name));
+  return `
+  <div class="modal-head">
+    <div class="modal-title">Confirm new task</div>
+    <button class="icon-btn" title="Close" onclick="closeModal()">&#10005;</button>
+  </div>
+  <div class="row-edit" style="padding:0;border-top:none;">
+    <div class="fields">
+      <div class="field" style="flex:1 1 100%;">
+        <label>Description</label>
+        <input type="text" id="qa-desc" value="${escapeHtml(qa.description || qa.text)}" />
+      </div>
+      <div class="field" style="flex:1 1 100%;">
+        <label>Detail</label>
+        <textarea id="qa-detail" placeholder="Optional — context, links, a checklist&hellip;">${escapeHtml(qa.detail || '')}</textarea>
+      </div>
+    </div>
+    <div class="fields">
+      <div class="field" style="flex:1;">
+        <label>Project</label>
+        <select id="qa-project">
+          <option value="">— pick a project —</option>
+          ${projectOptions.map(p => `<option value="${p.id}" ${p.id===qa.project_id?'selected':''}>${escapeHtml(p.name)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field">
+        <label>Due date</label>
+        <input type="date" id="qa-due" value="${qa.due_date || ''}" onclick="this.showPicker && this.showPicker()" />
+      </div>
+      <div class="field">
+        <label>Due time</label>
+        <input type="time" id="qa-duetime" value="${qa.due_time ? qa.due_time.slice(0,5) : ''}" onclick="this.showPicker && this.showPicker()" />
+      </div>
+      <div class="field">
+        <label>Priority</label>
+        <select id="qa-priority">
+          ${[1,2,3,4,5].map(n => `<option value="${n}" ${n===qa.priority?'selected':''}>${n}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field">
+        <label>Not before</label>
+        <input type="date" id="qa-notbefore" value="${qa.not_before || ''}" onclick="this.showPicker && this.showPicker()" />
+      </div>
+      <div class="field">
+        <label>Estimate</label>
+        <select id="qa-estimate">
+          <option value="">— unset —</option>
+          ${[15,30,60,120,240].map(m => `<option value="${m}" ${m===qa.estimate_minutes?'selected':''}>${estimateLabel(m)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field" style="flex-basis:100%;">
+        <label style="display:flex;align-items:center;gap:6px;font-weight:400;">
+          <input type="checkbox" id="qa-isevent" ${qa.is_event ? 'checked' : ''} style="width:auto;" />
+          Calendar event (fixed time, eg. reservation, appointment)
+        </label>
+      </div>
+      ${dateRefHelperHtml('qa-due')}
+    </div>
+    <div class="form-actions">
+      <button class="btn" onclick="saveQuickAddTask()">Add task</button>
+      <button class="btn-ghost" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>`;
+}
+
+async function saveQuickAddTask(){
+  const description = document.getElementById('qa-desc').value.trim();
+  if (!description) { alert('Description cannot be empty'); return; }
+  const detail = document.getElementById('qa-detail').value.trim() || null;
+  const project_id = document.getElementById('qa-project').value || null;
+  if (!project_id) { alert('Pick a project'); return; }
+  const due_date = document.getElementById('qa-due').value || null;
+  const due_time = document.getElementById('qa-duetime').value || null;
+  const priority = parseInt(document.getElementById('qa-priority').value, 10);
+  const not_before = document.getElementById('qa-notbefore').value || null;
+  const estimateRaw = document.getElementById('qa-estimate').value;
+  const estimate_minutes = estimateRaw ? parseInt(estimateRaw, 10) : null;
+  const is_event = document.getElementById('qa-isevent').checked;
+  if (is_event && !due_date) { alert('A calendar event needs a due date'); return; }
+  try{
+    const { error } = await client.from('tasks').insert({ project_id, description, detail, due_date, due_time, priority, not_before, estimate_minutes, is_event });
+    if (error) throw error;
+    quickAddParsed = null;
+    await loadData();
+  } catch(err){
+    alert('Could not add task: ' + (err.message || err));
+  }
+}
+
+async function updateTaskStatus(taskId, status){
+  try{
+    const { error } = await client.from('tasks').update({ status }).eq('id', taskId);
+    if (error) throw error;
+    await loadData();
+  } catch(err){
+    alert('Could not update task: ' + (err.message || err));
+  }
+}
+
+const previousStatusById = new Map(); // remembers pre-check status, for undo
+
+function playDoneChime(){
+  // Small synthesized two-note "ding" — no audio asset to host, just a couple of
+  // short sine-wave blips. Only ever called from a click handler, so autoplay
+  // restrictions don't apply. Swallow errors (e.g. Safari before user gesture quirks).
+  try{
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const now = ctx.currentTime;
+    [660, 880].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      const start = now + i * 0.09;
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(0.16, start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.35);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(start);
+      osc.stop(start + 0.4);
+    });
+  } catch(e){ /* audio not available — silently skip */ }
+}
+
+function spawnCompletionBurst(anchorEl){
+  const rect = anchorEl.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const colors = ['#5FD4C0', '#8FE8D8', '#E3B057', '#D488A8', '#6C93E0'];
+  for (let i = 0; i < 7; i++){
+    const angle = (Math.PI * 2 / 7) * i;
+    const dist = 20 + Math.random() * 10;
+    const dot = document.createElement('span');
+    dot.className = 'burst-particle';
+    dot.style.left = cx + 'px';
+    dot.style.top = cy + 'px';
+    dot.style.setProperty('--dx', (Math.cos(angle) * dist) + 'px');
+    dot.style.setProperty('--dy', (Math.sin(angle) * dist) + 'px');
+    dot.style.background = colors[i % colors.length];
+    document.body.appendChild(dot);
+    setTimeout(() => dot.remove(), 600);
+  }
+}
+
+function celebrateCheck(checkboxEl){
+  playDoneChime();
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  checkboxEl.classList.add('just-checked');
+  spawnCompletionBurst(checkboxEl);
+}
+
+async function toggleTicketDone(taskId, checkboxEl){
+  const checked = checkboxEl.checked;
+  if (checked) {
+    celebrateCheck(checkboxEl);
+    const t = tasks.find(x => x.id === taskId);
+    previousStatusById.set(taskId, t ? t.status : 'open');
+  }
+  const newStatus = checked ? 'done' : (previousStatusById.get(taskId) || 'open');
+  try{
+    const { error } = await client.from('tasks').update({ status: newStatus }).eq('id', taskId);
+    if (error) throw error;
+    const t = tasks.find(x => x.id === taskId);
+    if (t) t.status = newStatus;
+    if (checked) justCompleted.add(taskId); else justCompleted.delete(taskId);
+    renderStacks();
+    renderGrid();
+  } catch(err){
+    checkboxEl.checked = !checked;
+    alert('Could not update task: ' + (err.message || err));
+  }
+}
+
+function renderModal(){
+  const overlay = document.getElementById('modal-overlay');
+  const box = document.getElementById('modal-box');
+  if (!overlay || !box) return;
+
+  let html = '';
+  if (searchOpen){
+    html = renderSearchModal();
+  } else if (quickAddParsed){
+    html = renderQuickAddConfirm(quickAddParsed);
+  } else if (editingTaskId){
+    const t = tasks.find(x => x.id === editingTaskId);
+    if (t) html = renderTaskEditForm(t, tasks.filter(x => x.project_id === t.project_id));
+  } else if (editingProjectId){
+    const p = projectFor(editingProjectId);
+    if (p) html = renderProjectEditForm(p);
+  } else if (openTasksProjectId){
+    html = renderProjectTasksModal(openTasksProjectId);
+  }
+
+  if (!html){
+    overlay.classList.add('hidden');
+    box.innerHTML = '';
+    return;
+  }
+  overlay.classList.remove('hidden');
+  box.innerHTML = html;
+
+  if (searchOpen){
+    const input = document.getElementById('search-input');
+    if (input){
+      input.focus();
+      input.setSelectionRange(input.value.length, input.value.length);
+    }
+  }
+}
+
+function closeModal(){
+  editingTaskId = null;
+  editingProjectId = null;
+  openTasksProjectId = null;
+  quickAddParsed = null;
+  searchOpen = false;
+  searchQuery = '';
+  renderModal();
+}
+
+function openSearch(){
+  searchOpen = true;
+  searchQuery = '';
+  renderModal();
+}
+
+function onSearchInput(value){
+  searchQuery = value;
+  renderModal();
+}
+
+function searchMatches(query){
+  const q = query.toLowerCase();
+  return {
+    tasks: tasks.filter(t => t.description.toLowerCase().includes(q) || (t.detail || '').toLowerCase().includes(q)).slice(0, 8),
+    goals: goals.filter(g => g.description.toLowerCase().includes(q)).slice(0, 8),
+    projects: projects.filter(p => p.name.toLowerCase().includes(q)).slice(0, 8),
+  };
+}
+
+function highlightMatch(text, query){
+  const idx = text.toLowerCase().indexOf(query.toLowerCase());
+  if (idx === -1) return escapeHtml(text);
+  return escapeHtml(text.slice(0, idx)) + '<mark>' + escapeHtml(text.slice(idx, idx + query.length)) + '</mark>' + escapeHtml(text.slice(idx + query.length));
+}
+
+function searchResultRowHtml(colorHex, label, chip, onclick){
+  return `
+    <div class="row search-result-row" onclick="${onclick}">
+      <span class="dot-orb" style="--c:${colorHex}"></span>
+      <span class="desc">${label}</span>
+      <span class="type-chip">${chip}</span>
+    </div>`;
+}
+
+function renderSearchModal(){
+  const q = searchQuery.trim();
+  const results = q ? searchMatches(q) : { tasks: [], goals: [], projects: [] };
+  const hasAny = results.tasks.length || results.goals.length || results.projects.length;
+
+  let resultsHtml;
+  if (!q){
+    resultsHtml = `<div class="empty-row">Start typing to search tasks, goals, and projects.</div>`;
+  } else if (!hasAny){
+    resultsHtml = `<div class="empty-row">No matches for "${escapeHtml(q)}".</div>`;
+  } else {
+    resultsHtml = '';
+    if (results.tasks.length){
+      resultsHtml += `<div class="search-group-label">Tasks</div>` + results.tasks.map(t => {
+        const p = projectFor(t.project_id);
+        const descMatches = t.description.toLowerCase().includes(q);
+        const label = descMatches ? highlightMatch(t.description, q) : `${escapeHtml(t.description)} <span class="type-chip">in detail</span>`;
+        return searchResultRowHtml(p ? p.color : 'var(--ash)', label, 'task', `selectSearchTask('${t.id}')`);
+      }).join('');
+    }
+    if (results.goals.length){
+      resultsHtml += `<div class="search-group-label">Goals</div>` + results.goals.map(g => {
+        const p = g.project_id ? projectFor(g.project_id) : null;
+        return searchResultRowHtml(p ? p.color : 'var(--ash)', highlightMatch(g.description, q), 'goal', `selectSearchGoal('${g.id}')`);
+      }).join('');
+    }
+    if (results.projects.length){
+      resultsHtml += `<div class="search-group-label">Projects</div>` + results.projects.map(p => {
+        return searchResultRowHtml(p.color, highlightMatch(p.name, q), 'project', `selectSearchProject('${p.id}')`);
+      }).join('');
+    }
+  }
+
+  return `
+    <div class="modal-head">
+      <div class="modal-title">Search</div>
+      <button class="icon-btn" title="Close" onclick="closeModal()">&#10005;</button>
+    </div>
+    <div class="search-input-row">
+      <input type="text" id="search-input" value="${escapeAttr(searchQuery)}" placeholder="Search tasks, goals, projects&hellip;"
+        oninput="onSearchInput(this.value)" />
+    </div>
+    <div class="search-results">${resultsHtml}</div>`;
+}
+
+function selectSearchTask(id){
+  searchOpen = false;
+  searchQuery = '';
+  startEditTask(id);
+}
+
+function selectSearchGoal(id){
+  searchOpen = false;
+  searchQuery = '';
+  startEditGoal(id);
+}
+
+function selectSearchProject(id){
+  searchOpen = false;
+  searchQuery = '';
+  openProjectTasks(id);
+}
+
+function handleOverlayClick(e){
+  // Task/event editing is deliberately exempt from backdrop-dismiss — an accidental
+  // off-target click here was silently discarding in-progress edits. Save/Cancel are the
+  // only way out while editingTaskId is set (see the matching Escape guard below).
+  if (editingTaskId) return;
+  if (e.target.id === 'modal-overlay') closeModal();
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape'){
+    if (editingTaskId) return; // see handleOverlayClick — same reasoning, Save/Cancel only
+    closeModal();
+  }
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k'){
+    e.preventDefault();
+    openSearch();
+  }
+});
+
+// expose handlers used by inline HTML
+window.openProjectTasks = openProjectTasks;
+window.toggleShowCompleted = toggleShowCompleted;
+window.closeModal = closeModal;
+window.handleOverlayClick = handleOverlayClick;
+window.addTask = addTask;
+window.submitQuickAdd = submitQuickAdd;
+window.saveQuickAddTask = saveQuickAddTask;
+window.updateTaskStatus = updateTaskStatus;
+window.toggleTicketDone = toggleTicketDone;
+window.startEditTask = startEditTask;
+window.cancelEditTask = cancelEditTask;
+window.saveTaskEdit = saveTaskEdit;
+window.startEditProject = startEditProject;
+window.cancelEditProject = cancelEditProject;
+window.saveProjectEdit = saveProjectEdit;
+window.startEditGoal = startEditGoal;
+window.cancelEditGoal = cancelEditGoal;
+window.saveGoalEdit = saveGoalEdit;
+window.startAddGoal = startAddGoal;
+window.cancelAddGoal = cancelAddGoal;
+window.openSearch = openSearch;
+window.onSearchInput = onSearchInput;
+window.selectSearchTask = selectSearchTask;
+window.selectSearchGoal = selectSearchGoal;
+window.selectSearchProject = selectSearchProject;
+window.saveNewGoal = saveNewGoal;
+window.logClaudeUsage = logClaudeUsage;
+window.startLogClaudeUsage = startLogClaudeUsage;
+window.cancelLogClaudeUsage = cancelLogClaudeUsage;
+
+// =====================================================================
+// boot
+// =====================================================================
+if (configured) {
+  client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  render();
+  loadData();
+  setInterval(loadData, 60000); // light auto-refresh
+  setInterval(tickClock, 30000); // keep the greeting header's clock live between reloads
+  let projectGridResizeTimer = null;
+  window.addEventListener('resize', () => {
+    clearTimeout(projectGridResizeTimer);
+    projectGridResizeTimer = setTimeout(renderGrid, 150); // debounced — column count only needs to settle after resizing stops
+  });
+} else {
+  render();
+}
+</script>
+</body>
+</html>
