@@ -443,6 +443,7 @@ let metrics = [];
 let recurringTasks = [];
 let listItems = [];
 let editingTaskId = null;
+let confirmingDeleteTaskId = null; // task id currently showing the delete-confirm view inside the edit modal
 let editingProjectId = null;
 let openTasksProjectId = null;
 let searchOpen = false; // ⌘K search modal — searches tasks/goals/projects regardless of what's expanded/capped on screen
@@ -1975,18 +1976,60 @@ function renderTaskEditForm(t, siblingTasks){
     <div class="form-actions">
       <button class="btn" onclick="saveTaskEdit('${t.id}')">Save</button>
       <button class="btn-ghost" onclick="cancelEditTask()">Cancel</button>
+      <button class="btn-danger" style="margin-left:auto;" onclick="startDeleteTask('${t.id}')">Delete</button>
+    </div>
+  </div>`;
+}
+
+function taskDeleteConfirmHtml(t){
+  return `
+  <div class="modal-head">
+    <div class="modal-title">Delete task?</div>
+    <button class="icon-btn" title="Close" onclick="closeModal()">&#10005;</button>
+  </div>
+  <div class="row-edit" style="padding:0;border-top:none;">
+    <div class="confirm-copy" style="padding:0 18px 14px;">
+      Permanently deletes &ldquo;${escapeHtml(t.description)}&rdquo;. This can't be undone.
+    </div>
+    <div class="form-actions">
+      <button class="btn-danger" onclick="confirmDeleteTask('${t.id}')">Delete</button>
+      <button class="btn-ghost" onclick="cancelDeleteTask()">Cancel</button>
     </div>
   </div>`;
 }
 
 function startEditTask(id){
   editingTaskId = id;
+  confirmingDeleteTaskId = null;
   renderModal();
 }
 
 function cancelEditTask(){
   editingTaskId = null;
+  confirmingDeleteTaskId = null;
   renderModal();
+}
+
+function startDeleteTask(id){
+  confirmingDeleteTaskId = id;
+  renderModal();
+}
+
+function cancelDeleteTask(){
+  confirmingDeleteTaskId = null;
+  renderModal();
+}
+
+async function confirmDeleteTask(id){
+  try{
+    const { error } = await client.from('tasks').delete().eq('id', id);
+    if (error) throw error;
+    editingTaskId = null;
+    confirmingDeleteTaskId = null;
+    await fetchData();
+  } catch(err){
+    alert('Could not delete task: ' + (err.message || err));
+  }
 }
 
 async function saveTaskEdit(id){
@@ -2471,7 +2514,7 @@ function renderModal(){
     html = renderQuickAddConfirm(quickAddParsed);
   } else if (editingTaskId){
     const t = tasks.find(x => x.id === editingTaskId);
-    if (t) html = renderTaskEditForm(t, tasks.filter(x => x.project_id === t.project_id));
+    if (t) html = confirmingDeleteTaskId === editingTaskId ? taskDeleteConfirmHtml(t) : renderTaskEditForm(t, tasks.filter(x => x.project_id === t.project_id));
   } else if (editingProjectId){
     const p = projectFor(editingProjectId);
     if (p) html = renderProjectEditForm(p);
@@ -2498,6 +2541,7 @@ function renderModal(){
 
 function closeModal(){
   editingTaskId = null;
+  confirmingDeleteTaskId = null;
   editingProjectId = null;
   openTasksProjectId = null;
   quickAddParsed = null;
@@ -2636,6 +2680,9 @@ window.toggleTicketDone = toggleTicketDone;
 window.startEditTask = startEditTask;
 window.cancelEditTask = cancelEditTask;
 window.saveTaskEdit = saveTaskEdit;
+window.startDeleteTask = startDeleteTask;
+window.cancelDeleteTask = cancelDeleteTask;
+window.confirmDeleteTask = confirmDeleteTask;
 window.startEditProject = startEditProject;
 window.cancelEditProject = cancelEditProject;
 window.saveProjectEdit = saveProjectEdit;
