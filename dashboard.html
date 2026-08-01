@@ -1343,7 +1343,7 @@ async function saveGoalEdit(id){
     }).eq('id', id);
     if (error) throw error;
     editingGoalId = null;
-    await loadData();
+    await fetchData();
   } catch(err){
     alert('Could not save goal: ' + (err.message || err));
   }
@@ -1377,7 +1377,7 @@ async function saveNewGoal(){
     });
     if (error) throw error;
     addingGoal = false;
-    await loadData();
+    await fetchData();
   } catch(err){
     alert('Could not add goal: ' + (err.message || err));
   }
@@ -1522,7 +1522,7 @@ async function logClaudeUsage(){
     const { error } = await client.from('metrics').insert({ metric_name: 'claude_usage_weekly', value, unit: '%' });
     if (error) throw error;
     loggingClaudeUsage = false;
-    await loadData();
+    await fetchData();
   } catch(err){
     alert('Could not log Claude usage: ' + (err.message || err));
   }
@@ -2008,7 +2008,7 @@ async function saveTaskEdit(id){
     const { error } = await client.from('tasks').update({ project_id, description, detail, due_date, due_time, priority, status, not_before, estimate_minutes, blocked_by, is_event }).eq('id', id);
     if (error) throw error;
     editingTaskId = null;
-    await loadData();
+    await fetchData();
   } catch(err){
     alert('Could not save task: ' + (err.message || err));
   }
@@ -2107,7 +2107,7 @@ async function saveProjectEdit(id){
     const { error } = await client.from('projects').update({ status, priority, next_deadline, blocker, notes, detail, is_default }).eq('id', id);
     if (error) throw error;
     editingProjectId = null;
-    await loadData();
+    await fetchData();
   } catch(err){
     alert('Could not save project: ' + (err.message || err));
   }
@@ -2180,6 +2180,16 @@ function isEditingSomething(){
 
 async function loadData(){
   if (isEditingSomething()) return; // don't blow away in-progress edits with the 60s auto-refresh
+  await fetchData();
+}
+
+// Does the actual fetch + render, with no isEditingSomething() guard — used after a
+// save/mutation completes (which may have already cleared its own modal state but left
+// another modal, e.g. openTasksProjectId, still open) so the UI always reflects a
+// successful write instead of silently skipping the re-render. loadData() (above) is the
+// guarded wrapper for the passive 60s auto-refresh / boot, which must not clobber an
+// in-progress edit the user hasn't saved yet.
+async function fetchData(){
   try{
     const [{ data: p, error: pErr }, { data: t, error: tErr }, { data: g, error: gErr }, { data: m, error: mErr }, { data: rt, error: rtErr }, { data: li, error: liErr }] = await Promise.all([
       client.from('projects').select('*').order('priority', { ascending:true }),
@@ -2223,7 +2233,7 @@ async function addTask(projectId){
       due_time: timeInput.value || null
     });
     if (error) throw error;
-    await loadData();
+    await fetchData();
   } catch(err){
     alert('Could not add task: ' + (err.message || err));
   }
@@ -2359,7 +2369,7 @@ async function saveQuickAddTask(){
     const { error } = await client.from('tasks').insert({ project_id, description, detail, due_date, due_time, priority, not_before, estimate_minutes, is_event });
     if (error) throw error;
     quickAddParsed = null;
-    await loadData();
+    await fetchData();
   } catch(err){
     alert('Could not add task: ' + (err.message || err));
   }
@@ -2369,7 +2379,7 @@ async function updateTaskStatus(taskId, status){
   try{
     const { error } = await client.from('tasks').update({ status }).eq('id', taskId);
     if (error) throw error;
-    await loadData();
+    await fetchData();
   } catch(err){
     alert('Could not update task: ' + (err.message || err));
   }
